@@ -33,7 +33,6 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 - [Development tooling](#development-tooling)
 - [Data models](#data-models)
 - [Examples](#examples)
-- [Platform integration](#platform-integration)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
@@ -52,23 +51,6 @@ With dev dependencies (tests, ruff, build):
 
 ```bash
 pip install "viksa-ai[dev]"
-```
-
----
-
-
-**Local editable install** (use SDK changes before a PyPI release):
-
-```bash
-cd viksa-ai-workspace/viksa-sdk
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-```
-
-Then in `builder-service` or `chat-service` virtualenvs:
-
-```bash
-pip install -e ../viksa-sdk
 ```
 
 ---
@@ -187,15 +169,13 @@ Platform docs: [Agent auth and credentials](https://docs.viksaai.com/docs/agents
 
 ### A2A context
 
-Agent-to-agent calls can attach an optional envelope under the reserved payload key `__viksa_a2a__`. The worker strips it before your function runs; use `context()` to read correlation metadata.
+Agent-to-agent calls can attach an optional envelope under the reserved payload key `__viksa_a2a__`. Use `context()` to read correlation metadata inside your endpoint.
 
 | Symbol | Role |
 |--------|------|
 | `A2A_PAYLOAD_KEY` | `"__viksa_a2a__"` — wire key in workflow inputs |
 | `attach_envelope(inputs, envelope)` | Attach envelope to an inputs dict (callers / integrators) |
 | `context()` | Copy of the current call envelope, or `{}` |
-| `_strip_envelope(inputs)` | **Internal** — worker/importer hook |
-| `_set_envelope(envelope)` | **Internal** — worker/importer hook |
 
 `A2AContext` is a `TypedDict` documenting common keys: `run_id`, `parent_step_id`, `caller_agent`, `callee_agent`, `endpoint`, `idempotency_key`, `deadline_at`, `metadata`.
 
@@ -216,15 +196,13 @@ parent = ctx.get("parent_step_id")
 
 ### Injected `ViksaAI.py`
 
-The platform injects `ViksaAI.py` into every agent’s file list. The SDK is the single source of truth:
+The platform injects `ViksaAI.py` into every agent’s file list. Generate the canonical module body from the SDK:
 
 ```python
-from viksa_ai.runtime import to_module_source
+from viksa_ai.runtime.inject import to_module_source
 
-body = to_module_source()  # exact string written to ViksaAI.py
+body = to_module_source()
 ```
-
-`builder-service` and `chat-service` load this via the `viksa-ai` package (`viksa_ai.runtime.inject.to_module_source`).
 
 ---
 
@@ -334,7 +312,6 @@ Use `client.request(method, prefix, path)` for any route not yet wrapped.
 | `usage()` | `GET /auth/usage` | Plan usage |
 | `list_sessions()`, `revoke_session(id)` | session management | |
 | `create_api_key`, `list_api_keys`, `revoke_api_key`, `delete_api_key` | `/auth/key/api` | API keys |
-| `create_worker_key`, `list_worker_keys` | `/auth/key/worker` | Worker keys |
 | `auth.orgs.*`, `auth.projects.*` | `/org`, `/project` | Org/project CRUD |
 
 #### `client.builder.agents`
@@ -390,7 +367,6 @@ Use `client.request(method, prefix, path)` for any route not yet wrapped.
 | `cancel_execution`, `active_execution`, `stream_execution` | execution control | |
 | `patch_conversation`, `delete_conversation`, `search`, `token_stats` | conversations | |
 | `approvals.list/get/decide` | HITL approvals | |
-| `executions/*/debug/*` | debugger hooks | |
 
 #### `client.chat.triggers`
 
@@ -479,7 +455,7 @@ async for evt in wh.stream({"event": "order.created"}):
     print(evt)
 ```
 
-**Coverage note:** The SDK wraps all major **public** platform flows. Routes not yet listed can be called via `await client.request("GET", "/builder", "/workforce/...")`. Internal `/internal/*` routes are excluded by design. SSO admin, analytics, devspace, and worker registration may be added in future minor releases or via OpenAPI codegen (v0.3).
+**Coverage note:** The SDK wraps major public platform flows. Routes not yet listed can be called via `await client.request("GET", "/builder", "/path")`.
 
 ### Error handling (v0.2)
 
@@ -561,7 +537,7 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 
 ## Development tooling
 
-Validate agent manifests **before** pushing to the platform — same rules as chat-service generation validators.
+Validate agent manifests **before** pushing to the platform.
 
 ### CLI
 
@@ -625,25 +601,6 @@ Run locally after `pip install -e .` and `pip install httpx`.
 
 ---
 
-## Platform integration
-
-| Service | Integration |
-|---------|-------------|
-| **builder-service** | Injects `ViksaAI.py` via `viksa_ai.runtime.inject.to_module_source()`; pins `viksa-ai>=0.1.0` |
-| **chat-service** | Full SDK injection on AI-generated agents (includes `ViksaAuth`) |
-| **chrona-worker** | Strips `__viksa_a2a__`, injects auth env vars, runs user endpoints |
-
-**Version policy:** platform services pin `viksa-ai` minor versions; breaking runtime changes require a major SDK bump and coordinated deploy.
-
-**Sync injected source** (monorepo copy-check):
-
-```bash
-python scripts/sync_injected_sdk.py > /tmp/ViksaAI.py
-diff /tmp/ViksaAI.py tests/fixtures/ViksaAI.py.expected
-```
-
----
-
 ## Contributing
 
 ```bash
@@ -656,11 +613,7 @@ ruff check src tests
 ruff format src tests
 ```
 
-CI runs on push/PR to `main` (Python 3.10–3.12). Releases are published to PyPI when a `v*` tag is pushed via [Build and Publish to PyPI](.github/workflows/build-and-publish.yml).
-
-**PyPI setup (trusted publishing or `PYPI_API_TOKEN` secret):** see [.github/PYPI_PUBLISHING.md](.github/PYPI_PUBLISHING.md).
-
-Contract test: `to_module_source()` must match `tests/fixtures/ViksaAI.py.expected`.
+CI runs on push and pull requests to `main` (Python 3.10–3.12). Release versions are tagged as `v*` on this repository.
 
 ---
 
