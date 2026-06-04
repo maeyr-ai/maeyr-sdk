@@ -656,7 +656,9 @@ ruff check src tests
 ruff format src tests
 ```
 
-CI runs on push/PR to `main` (Python 3.10–3.12). Releases are published to PyPI when a `v*` tag is pushed (GitHub Actions + [trusted publishing](https://docs.pypi.org/trusted-publishers/)).
+CI runs on push/PR to `main` (Python 3.10–3.12). Releases are published to PyPI when a `v*` tag is pushed via [Build and Publish to PyPI](.github/workflows/build-and-publish.yml).
+
+**PyPI setup (trusted publishing or `PYPI_API_TOKEN` secret):** see [.github/PYPI_PUBLISHING.md](.github/PYPI_PUBLISHING.md).
 
 Contract test: `to_module_source()` must match `tests/fixtures/ViksaAI.py.expected`.
 
