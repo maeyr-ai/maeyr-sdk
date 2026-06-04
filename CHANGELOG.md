@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (2026-06-04)
+
+- PyPI release workflow, SDK client expansion, API key auth alignment, docs and CI fixes
+
 ## 0.2.0 (2026-06-04)
 
 - Typed HTTP error hierarchy (`ViksaNotFoundError`, `ViksaRateLimitError`, etc.)

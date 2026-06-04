@@ -43,11 +43,15 @@ No long-lived API token is stored in GitHub. PyPI issues a short-lived token per
 
 ### 4. Release
 
+**Recommended (tag-driven):**
+
 ```bash
 # Bump version in pyproject.toml first, then:
 git tag v0.2.2
 git push origin v0.2.2
 ```
+
+**Manual dispatch:** Actions → **Build and Publish to PyPI** → **Run workflow** on `main`. After a successful publish, the workflow creates and pushes `v<version>` from `pyproject.toml` if that tag does not exist yet.
 
 Or create a GitHub Release from the tag; the workflow also runs on `release: published`.
 
