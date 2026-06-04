@@ -2,11 +2,17 @@
 
 from typing import TYPE_CHECKING
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "ViksaApiError",
+    "ViksaAuthenticationError",
     "ViksaClient",
+    "ViksaNotFoundError",
+    "ViksaRateLimitError",
+    "ViksaTransportError",
+    "ViksaValidationError",
+    "WebhookClient",
     "__version__",
 ]
 
@@ -16,12 +22,33 @@ def __getattr__(name: str):
         from viksa_ai.client import ViksaClient
 
         return ViksaClient
-    if name == "ViksaApiError":
-        from viksa_ai.client import ViksaApiError
+    if name == "WebhookClient":
+        from viksa_ai.client import WebhookClient
 
-        return ViksaApiError
+        return WebhookClient
+    for exc_name, exc_path in (
+        ("ViksaApiError", "ViksaApiError"),
+        ("ViksaAuthenticationError", "ViksaAuthenticationError"),
+        ("ViksaNotFoundError", "ViksaNotFoundError"),
+        ("ViksaRateLimitError", "ViksaRateLimitError"),
+        ("ViksaTransportError", "ViksaTransportError"),
+        ("ViksaValidationError", "ViksaValidationError"),
+    ):
+        if name == exc_name:
+            from viksa_ai.client import errors as err
+
+            return getattr(err, exc_path)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 if TYPE_CHECKING:
-    from viksa_ai.client import ViksaApiError, ViksaClient
+    from viksa_ai.client import (
+        ViksaApiError,
+        ViksaAuthenticationError,
+        ViksaClient,
+        ViksaNotFoundError,
+        ViksaRateLimitError,
+        ViksaTransportError,
+        ViksaValidationError,
+        WebhookClient,
+    )

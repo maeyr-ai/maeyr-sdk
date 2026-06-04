@@ -44,3 +44,16 @@ class UserResponse(BaseModel):
 class ApiKeyRequest(BaseModel):
     name: str = Field(..., description="Human-readable key name")
     description: Optional[str] = None
+
+
+class KeyValidationRequest(BaseModel):
+    api_key: str
+
+
+class KeyValidationResponse(BaseModel):
+    valid: bool
+    account_id: Optional[str] = None
+    org_id: Optional[str] = None
+    project_id: Optional[str] = None
+    scopes: list[str] = []
+    error: Optional[str] = None

@@ -1,8 +1,7 @@
 import httpx
 import pytest
 
-from viksa_ai.client import ViksaClient
-from viksa_ai.client.errors import ViksaApiError
+from viksa_ai.client import ViksaClient, ViksaNotFoundError
 
 
 @pytest.mark.asyncio
@@ -15,7 +14,7 @@ async def test_auth_me_success():
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
         client = ViksaClient("token", org_id="o1", project_id="p1", base_url="https://api.test")
-        client._async_client = http
+        client._transport._async_client = http
         user = await client.auth.me()
         assert user.email == "a@b.com"
 
@@ -27,7 +26,8 @@ async def test_api_error_on_404():
     )
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
         client = ViksaClient("token", base_url="https://api.test")
-        client._async_client = http
-        with pytest.raises(ViksaApiError) as exc:
+        client._transport._async_client = http
+        with pytest.raises(ViksaNotFoundError) as exc:
             await client.builder.agents.get("missing")
         assert exc.value.status_code == 404
+        assert exc.value.request_id is None or isinstance(exc.value.request_id, str)

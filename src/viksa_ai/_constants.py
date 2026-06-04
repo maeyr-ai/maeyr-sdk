@@ -9,10 +9,15 @@ SERVICE_PATHS = {
     "pulse": "/pulse",
     "workflow": "/workflow",
     "scheduler": "/scheduler",
-    "marketplace": "/marketplace",
+    "marketplace": "/marketplace/api/v1/marketplace",
+    "org": "/org",
+    "project": "/project",
 }
 
 ENV_ACCESS_TOKEN = "VIKSA_ACCESS_TOKEN"
+ENV_API_KEY = "VIKSA_API_KEY"
+ENV_EMAIL = "VIKSA_EMAIL"
+ENV_PASSWORD = "VIKSA_PASSWORD"
 ENV_REFRESH_TOKEN = "VIKSA_REFRESH_TOKEN"
 ENV_ORG_ID = "VIKSA_ORG_ID"
 ENV_PROJECT_ID = "VIKSA_PROJECT_ID"

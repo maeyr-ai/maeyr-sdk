@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Optional
 
+from viksa_ai._constants import SERVICE_PATHS
+from viksa_ai.client.pagination import iter_pages
 from viksa_ai.models.agent import AgentCreationRequest, AgentUpdateRequest
 
 if TYPE_CHECKING:
@@ -11,13 +13,11 @@ if TYPE_CHECKING:
 class _AgentsClient:
     def __init__(self, builder: BuilderClient) -> None:
         self._builder = builder
+        self._prefix = SERVICE_PATHS["builder"]
 
     async def create(self, request: AgentCreationRequest) -> Dict[str, Any]:
         return await self._builder._client._arequest(
-            "POST",
-            "/agent",
-            "/create",
-            json=request.model_dump(mode="json"),
+            "POST", "/agent", "/create", json=request.model_dump(mode="json")
         )
 
     async def list(
@@ -34,6 +34,15 @@ class _AgentsClient:
             "GET", "/agent", "/list", params=params
         )
 
+    def iter_all(
+        self, *, limit: int = 50, search: Optional[str] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        return iter_pages(
+            lambda **kw: self.list(search=search, **kw),
+            limit=limit,
+            items_key="agents",
+        )
+
     async def get(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest("GET", "/agent", f"/{agent_id}")
 
@@ -45,6 +54,12 @@ class _AgentsClient:
 
     async def delete(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest("DELETE", "/agent", f"/{agent_id}")
+
+    async def set_status(self, agent_id: str, *, enabled: bool) -> Dict[str, Any]:
+        status = "enabled" if enabled else "disabled"
+        return await self._builder._client._arequest(
+            "PATCH", "/agent", f"/{agent_id}/status", json={"status": status}
+        )
 
     async def set_endpoint_status(
         self, agent_id: str, endpoint_name: str, *, enabled: bool
@@ -60,6 +75,16 @@ class _AgentsClient:
     async def revisions(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest(
             "GET", "/agent", f"/{agent_id}/revisions"
+        )
+
+    async def revision(self, agent_id: str, revision_id: str) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "GET", "/agent", f"/{agent_id}/revisions/{revision_id}"
+        )
+
+    async def share(self, agent_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "POST", "/agent", f"/{agent_id}/share", json=body
         )
 
 
@@ -96,10 +121,13 @@ class _SecretsClient:
         value: str,
         *,
         description: Optional[str] = None,
+        passphrase: Optional[str] = None,
     ) -> Dict[str, Any]:
         body: Dict[str, Any] = {"name": name, "value": value}
         if description:
             body["description"] = description
+        if passphrase:
+            body["passphrase"] = passphrase
         return await self._builder._client._arequest(
             "POST", "/secret", "/create", json=body
         )
@@ -114,8 +142,29 @@ class _SecretsClient:
             "GET", "/secret", "/list", params=params
         )
 
-    async def get_secret(self, secret_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest("GET", "/secret", f"/{secret_id}")
+    async def get_secret(
+        self, secret_id: str, *, passphrase: Optional[str] = None
+    ) -> Dict[str, Any]:
+        params = {"passphrase": passphrase} if passphrase else None
+        return await self._builder._client._arequest(
+            "GET", "/secret", f"/{secret_id}", params=params
+        )
+
+    async def update_secret(self, secret_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "PUT", "/secret", f"/{secret_id}", json=body
+        )
+
+    async def delete_secret(self, secret_id: str, *, force: bool = False) -> Dict[str, Any]:
+        params = {"force": "true"} if force else None
+        return await self._builder._client._arequest(
+            "DELETE", "/secret", f"/{secret_id}", params=params
+        )
+
+    async def secret_usage(self, secret_id: str) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "GET", "/secret", f"/{secret_id}/usage"
+        )
 
 
 class _McpClient:
@@ -140,6 +189,26 @@ class _McpClient:
     async def get(self, server_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest(
             "GET", "/mcp/servers", f"/{server_id}"
+        )
+
+    async def update(self, server_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "PATCH", "/mcp/servers", f"/{server_id}", json=body
+        )
+
+    async def delete(self, server_id: str) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "DELETE", "/mcp/servers", f"/{server_id}"
+        )
+
+    async def start(self, server_id: str) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "POST", "/mcp/servers", f"/{server_id}/start"
+        )
+
+    async def stop(self, server_id: str) -> Dict[str, Any]:
+        return await self._builder._client._arequest(
+            "POST", "/mcp/servers", f"/{server_id}/stop"
         )
 
 
