@@ -12,7 +12,6 @@ from viksa_ai.client.config import ClientConfig, RetryConfig
 from viksa_ai.client.errors import (
     ViksaApiError,
     ViksaRateLimitError,
-    ViksaTransportError,
     raise_for_response,
     wrap_transport_error,
 )
@@ -119,10 +118,7 @@ class HttpTransport:
                 )
             except httpx.HTTPError as exc:
                 last_exc = wrap_transport_error(exc, method=method, url=url)
-                if (
-                    retry_cfg.retry_on_connection_errors
-                    and attempt < retry_cfg.max_retries
-                ):
+                if retry_cfg.retry_on_connection_errors and attempt < retry_cfg.max_retries:
                     await asyncio.sleep(_compute_backoff(attempt, retry_cfg, None))
                     continue
                 raise last_exc from exc
@@ -133,19 +129,12 @@ class HttpTransport:
             retry_after: Optional[float] = None
             if response.status_code == 429:
                 try:
-                    raise_for_response(
-                        response, service=service, method=method, path=path
-                    )
+                    raise_for_response(response, service=service, method=method, path=path)
                 except ViksaRateLimitError as rate_exc:
                     retry_after = rate_exc.retry_after
                     last_exc = rate_exc
-                    if (
-                        attempt < retry_cfg.max_retries
-                        and _should_retry_status(429, retry_cfg)
-                    ):
-                        await asyncio.sleep(
-                            _compute_backoff(attempt, retry_cfg, retry_after)
-                        )
+                    if attempt < retry_cfg.max_retries and _should_retry_status(429, retry_cfg):
+                        await asyncio.sleep(_compute_backoff(attempt, retry_cfg, retry_after))
                         continue
                     raise
 
@@ -196,10 +185,7 @@ class HttpTransport:
                 )
             except httpx.HTTPError as exc:
                 last_exc = wrap_transport_error(exc, method=method, url=url)
-                if (
-                    retry_cfg.retry_on_connection_errors
-                    and attempt < retry_cfg.max_retries
-                ):
+                if retry_cfg.retry_on_connection_errors and attempt < retry_cfg.max_retries:
                     time.sleep(_compute_backoff(attempt, retry_cfg, None))
                     continue
                 raise last_exc from exc
@@ -210,16 +196,11 @@ class HttpTransport:
             retry_after = None
             if response.status_code == 429:
                 try:
-                    raise_for_response(
-                        response, service=service, method=method, path=path
-                    )
+                    raise_for_response(response, service=service, method=method, path=path)
                 except ViksaRateLimitError as rate_exc:
                     retry_after = rate_exc.retry_after
                     last_exc = rate_exc
-                    if (
-                        attempt < retry_cfg.max_retries
-                        and _should_retry_status(429, retry_cfg)
-                    ):
+                    if attempt < retry_cfg.max_retries and _should_retry_status(429, retry_cfg):
                         time.sleep(_compute_backoff(attempt, retry_cfg, retry_after))
                         continue
                     raise

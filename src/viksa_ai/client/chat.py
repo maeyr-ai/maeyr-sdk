@@ -30,9 +30,7 @@ class _TriggersClient:
         )
 
     async def delete(self, trigger_id: str) -> Dict[str, Any]:
-        return await self._chat._client._arequest(
-            "DELETE", "/chat", f"/trigger/{trigger_id}"
-        )
+        return await self._chat._client._arequest("DELETE", "/chat", f"/trigger/{trigger_id}")
 
     async def test(self, trigger_id: str, body: Optional[Dict[str, Any]] = None) -> Any:
         return self._chat._client._astream(
@@ -56,9 +54,7 @@ class _ApprovalsClient:
         return await self._chat._client._arequest("GET", "/chat", "/approvals", params=params)
 
     async def get(self, approval_id: str) -> Dict[str, Any]:
-        return await self._chat._client._arequest(
-            "GET", "/chat", f"/approvals/{approval_id}"
-        )
+        return await self._chat._client._arequest("GET", "/chat", f"/approvals/{approval_id}")
 
     async def decide(self, approval_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._chat._client._arequest(
@@ -110,14 +106,10 @@ class ChatClient:
             yield event
 
     async def cancel_execution(self, conversation_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "POST", "/chat", f"/execution/{conversation_id}/cancel"
-        )
+        return await self._client._arequest("POST", "/chat", f"/execution/{conversation_id}/cancel")
 
     async def active_execution(self, conversation_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/chat", f"/execution/{conversation_id}/active"
-        )
+        return await self._client._arequest("GET", "/chat", f"/execution/{conversation_id}/active")
 
     async def stream_execution(self, conversation_id: str) -> AsyncIterator[Dict[str, Any]]:
         async for event in self._client._astream(
@@ -141,9 +133,7 @@ class ChatClient:
         )
 
     async def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/chat", f"/conversations/{conversation_id}"
-        )
+        return await self._client._arequest("GET", "/chat", f"/conversations/{conversation_id}")
 
     async def patch_conversation(
         self, conversation_id: str, body: Dict[str, Any]
@@ -153,9 +143,7 @@ class ChatClient:
         )
 
     async def delete_conversation(self, conversation_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "DELETE", "/chat", f"/conversations/{conversation_id}"
-        )
+        return await self._client._arequest("DELETE", "/chat", f"/conversations/{conversation_id}")
 
     async def delete_message(self, message_id: str) -> Dict[str, Any]:
         return await self._client._arequest("DELETE", "/chat", f"/messages/{message_id}")
@@ -164,9 +152,7 @@ class ChatClient:
         return await self._client._arequest("POST", "/chat", "/search", json=body)
 
     async def token_stats(self, **params: Any) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/chat", "/stats/tokens", params=params or None
-        )
+        return await self._client._arequest("GET", "/chat", "/stats/tokens", params=params or None)
 
     async def generate_agent(self, prompt: str) -> Dict[str, Any]:
         return await self._client._arequest(
@@ -177,9 +163,7 @@ class ChatClient:
         return await self._client._arequest("POST", "/chat", "/fix/agent", json=body)
 
     async def execution_events(self, execution_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/chat", f"/executions/{execution_id}/events"
-        )
+        return await self._client._arequest("GET", "/chat", f"/executions/{execution_id}/events")
 
     async def debug_start(self, execution_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._client._arequest(

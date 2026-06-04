@@ -6,9 +6,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Protocol
 
 
 class _ListPage(Protocol):
-    async def __call__(
-        self, *, skip: int, limit: int, **kwargs: Any
-    ) -> Dict[str, Any]: ...
+    async def __call__(self, *, skip: int, limit: int, **kwargs: Any) -> Dict[str, Any]: ...
 
 
 async def iter_pages(

@@ -44,7 +44,9 @@ def test_raise_401_authentication():
 def test_raise_422_validation():
     response = httpx.Response(
         422,
-        json={"detail": [{"loc": ["body", "name"], "msg": "too short", "type": "string_too_short"}]},
+        json={
+            "detail": [{"loc": ["body", "name"], "msg": "too short", "type": "string_too_short"}]
+        },
     )
     with pytest.raises(ViksaValidationError) as exc:
         raise_for_response(response, service="builder", method="POST", path="/agent/create")

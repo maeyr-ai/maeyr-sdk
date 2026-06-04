@@ -85,9 +85,7 @@ class WorkflowClient:
         return await self._client._arequest("GET", "/workflow", f"/id/{workflow_id}")
 
     async def patch(self, workflow_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "PATCH", "/workflow", f"/id/{workflow_id}", json=body
-        )
+        return await self._client._arequest("PATCH", "/workflow", f"/id/{workflow_id}", json=body)
 
     async def list(self, *, skip: int = 0, limit: int = 50) -> Dict[str, Any]:
         return await self._client._arequest(
@@ -98,9 +96,7 @@ class WorkflowClient:
         return iter_pages(lambda **kw: self.list(**kw), limit=limit, items_key="workflows")
 
     async def related(self, workflow_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/workflow", f"/related/{workflow_id}"
-        )
+        return await self._client._arequest("GET", "/workflow", f"/related/{workflow_id}")
 
     async def clone(self, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._client._arequest("POST", "/workflow", "/clone", json=body)
@@ -108,7 +104,9 @@ class WorkflowClient:
     async def rerun(self, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._client._arequest("POST", "/workflow", "/rerun", json=body)
 
-    async def execute(self, workflow_id: str, body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def execute(
+        self, workflow_id: str, body: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         return await self._client._arequest(
             "POST",
             "/workflow",

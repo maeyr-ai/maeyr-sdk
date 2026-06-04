@@ -89,9 +89,9 @@ class ViksaAuth:
         """
         prefix = "{}.".format(method_id)
         return {
-            k[len(prefix):]: v
+            k[len(prefix) :]: v
             for k, v in os.environ.items()
-            if k.startswith(prefix) and "." not in k[len(prefix):]
+            if k.startswith(prefix) and "." not in k[len(prefix) :]
         }
 
     @staticmethod
@@ -123,9 +123,7 @@ class ViksaAuth:
             if chosen is None:
                 raise ViksaAuthError(
                     "None of the requested auth methods are configured: {}. "
-                    "Enabled methods: {}.".format(
-                        list(candidates), ViksaAuth.get_enabled_methods()
-                    )
+                    "Enabled methods: {}.".format(list(candidates), ViksaAuth.get_enabled_methods())
                 )
             return chosen
         enabled = ViksaAuth.get_enabled_methods()

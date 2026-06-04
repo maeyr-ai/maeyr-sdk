@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import List, Optional, Union
 
-from viksa_ai.models.a2a import A2AEnvelope, A2A_PROTOCOL_VERSION
+from viksa_ai.models.a2a import A2A_PROTOCOL_VERSION, A2AEnvelope
 from viksa_ai.models.agent import AgentEndpoint, AgentInput
 
 
@@ -19,9 +19,7 @@ def _validate_value(name: str, value, schema: AgentInput) -> List[str]:
         return issues
 
     if not schema.type.validate_value(value):
-        issues.append(
-            f"input '{name}': expected {schema.type.value}, got {type(value).__name__}"
-        )
+        issues.append(f"input '{name}': expected {schema.type.value}, got {type(value).__name__}")
         return issues
 
     if schema.allowed_values and value not in schema.allowed_values:
@@ -37,13 +35,9 @@ def _validate_value(name: str, value, schema: AgentInput) -> List[str]:
 
     if isinstance(value, str):
         if schema.min_length is not None and len(value) < schema.min_length:
-            issues.append(
-                f"input '{name}': length {len(value)} < min_length {schema.min_length}"
-            )
+            issues.append(f"input '{name}': length {len(value)} < min_length {schema.min_length}")
         if schema.max_length is not None and len(value) > schema.max_length:
-            issues.append(
-                f"input '{name}': length {len(value)} > max_length {schema.max_length}"
-            )
+            issues.append(f"input '{name}': length {len(value)} > max_length {schema.max_length}")
 
     return issues
 

@@ -30,9 +30,7 @@ class _AgentsClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if search:
             params["search"] = search
-        return await self._builder._client._arequest(
-            "GET", "/agent", "/list", params=params
-        )
+        return await self._builder._client._arequest("GET", "/agent", "/list", params=params)
 
     def iter_all(
         self, *, limit: int = 50, search: Optional[str] = None
@@ -48,9 +46,7 @@ class _AgentsClient:
 
     async def update(self, agent_id: str, request: AgentUpdateRequest) -> Dict[str, Any]:
         body = request.model_dump(mode="json", exclude_none=True)
-        return await self._builder._client._arequest(
-            "PUT", "/agent", f"/{agent_id}", json=body
-        )
+        return await self._builder._client._arequest("PUT", "/agent", f"/{agent_id}", json=body)
 
     async def delete(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest("DELETE", "/agent", f"/{agent_id}")
@@ -73,9 +69,7 @@ class _AgentsClient:
         )
 
     async def revisions(self, agent_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", "/agent", f"/{agent_id}/revisions"
-        )
+        return await self._builder._client._arequest("GET", "/agent", f"/{agent_id}/revisions")
 
     async def revision(self, agent_id: str, revision_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest(
@@ -128,9 +122,7 @@ class _SecretsClient:
             body["description"] = description
         if passphrase:
             body["passphrase"] = passphrase
-        return await self._builder._client._arequest(
-            "POST", "/secret", "/create", json=body
-        )
+        return await self._builder._client._arequest("POST", "/secret", "/create", json=body)
 
     async def list_secrets(
         self, *, skip: int = 0, limit: int = 50, search: Optional[str] = None
@@ -138,9 +130,7 @@ class _SecretsClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if search:
             params["search"] = search
-        return await self._builder._client._arequest(
-            "GET", "/secret", "/list", params=params
-        )
+        return await self._builder._client._arequest("GET", "/secret", "/list", params=params)
 
     async def get_secret(
         self, secret_id: str, *, passphrase: Optional[str] = None
@@ -151,9 +141,7 @@ class _SecretsClient:
         )
 
     async def update_secret(self, secret_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "PUT", "/secret", f"/{secret_id}", json=body
-        )
+        return await self._builder._client._arequest("PUT", "/secret", f"/{secret_id}", json=body)
 
     async def delete_secret(self, secret_id: str, *, force: bool = False) -> Dict[str, Any]:
         params = {"force": "true"} if force else None
@@ -162,9 +150,7 @@ class _SecretsClient:
         )
 
     async def secret_usage(self, secret_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", "/secret", f"/{secret_id}/usage"
-        )
+        return await self._builder._client._arequest("GET", "/secret", f"/{secret_id}/usage")
 
 
 class _McpClient:
@@ -172,9 +158,7 @@ class _McpClient:
         self._builder = builder
 
     async def create(self, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "POST", "/mcp/servers", "", json=body
-        )
+        return await self._builder._client._arequest("POST", "/mcp/servers", "", json=body)
 
     async def list(
         self, *, status: Optional[str] = None, skip: int = 0, limit: int = 50
@@ -182,14 +166,10 @@ class _McpClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if status:
             params["status"] = status
-        return await self._builder._client._arequest(
-            "GET", "/mcp/servers", "", params=params
-        )
+        return await self._builder._client._arequest("GET", "/mcp/servers", "", params=params)
 
     async def get(self, server_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", "/mcp/servers", f"/{server_id}"
-        )
+        return await self._builder._client._arequest("GET", "/mcp/servers", f"/{server_id}")
 
     async def update(self, server_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._builder._client._arequest(
@@ -197,19 +177,13 @@ class _McpClient:
         )
 
     async def delete(self, server_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "DELETE", "/mcp/servers", f"/{server_id}"
-        )
+        return await self._builder._client._arequest("DELETE", "/mcp/servers", f"/{server_id}")
 
     async def start(self, server_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "POST", "/mcp/servers", f"/{server_id}/start"
-        )
+        return await self._builder._client._arequest("POST", "/mcp/servers", f"/{server_id}/start")
 
     async def stop(self, server_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "POST", "/mcp/servers", f"/{server_id}/stop"
-        )
+        return await self._builder._client._arequest("POST", "/mcp/servers", f"/{server_id}/stop")
 
 
 class BuilderClient:

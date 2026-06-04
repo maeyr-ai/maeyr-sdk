@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from viksa_ai.client.base import ViksaClient
@@ -19,9 +19,7 @@ class SchedulerClient:
         )
 
     async def get(self, schedule_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", "/scheduler", f"/schedule/{schedule_id}"
-        )
+        return await self._client._arequest("GET", "/scheduler", f"/schedule/{schedule_id}")
 
     async def update(self, schedule_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._client._arequest(
@@ -29,19 +27,13 @@ class SchedulerClient:
         )
 
     async def delete(self, schedule_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "DELETE", "/scheduler", f"/schedule/{schedule_id}"
-        )
+        return await self._client._arequest("DELETE", "/scheduler", f"/schedule/{schedule_id}")
 
     async def pause(self, schedule_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "POST", "/scheduler", f"/schedule/{schedule_id}/pause"
-        )
+        return await self._client._arequest("POST", "/scheduler", f"/schedule/{schedule_id}/pause")
 
     async def resume(self, schedule_id: str) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "POST", "/scheduler", f"/schedule/{schedule_id}/resume"
-        )
+        return await self._client._arequest("POST", "/scheduler", f"/schedule/{schedule_id}/resume")
 
     async def run_now(self, schedule_id: str) -> Dict[str, Any]:
         return await self._client._arequest(

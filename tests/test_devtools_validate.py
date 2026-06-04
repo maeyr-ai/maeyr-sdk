@@ -1,6 +1,6 @@
 import pytest
 
-from viksa_ai.devtools import AgentValidationError, validate_agent_manifest, validate_a2a_envelope
+from viksa_ai.devtools import AgentValidationError, validate_a2a_envelope, validate_agent_manifest
 from viksa_ai.models.a2a import A2AEnvelope
 from viksa_ai.models.agent import AgentEndpoint, AgentInput, EndpointInputRef, InputType
 
@@ -11,14 +11,14 @@ VALID_MANIFEST = {
         {
             "name": "main.py",
             "mime_type": "python",
-            "content": '''
+            "content": """
 from typing import Any, Dict
 from viksa_ai.runtime import mcp_endpoint
 
 @mcp_endpoint("echo")
 async def echo(payload: Dict[str, Any]):
     return {"out": payload.get("msg")}
-''',
+""",
         }
     ],
     "inputs": [{"name": "msg", "type": "string"}],

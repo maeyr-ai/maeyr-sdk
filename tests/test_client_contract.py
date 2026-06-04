@@ -21,9 +21,7 @@ async def test_auth_me_success():
 
 @pytest.mark.asyncio
 async def test_api_error_on_404():
-    transport = httpx.MockTransport(
-        lambda r: httpx.Response(404, json={"detail": "not found"})
-    )
+    transport = httpx.MockTransport(lambda r: httpx.Response(404, json={"detail": "not found"}))
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
         client = ViksaClient("token", base_url="https://api.test")
         client._transport._async_client = http

@@ -62,9 +62,7 @@ class WebhookClient:
                 ) as response:
                     if response.status_code >= 400:
                         await response.aread()
-                        raise_for_response(
-                            response, service="chat", method="POST", path=path
-                        )
+                        raise_for_response(response, service="chat", method="POST", path=path)
                     async for line in response.aiter_lines():
                         if not line or not line.startswith("data:"):
                             continue

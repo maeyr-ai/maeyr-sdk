@@ -5,7 +5,7 @@ import types
 
 import pytest
 
-from viksa_ai.runtime import ViksaAuth, ViksaAuthError, mcp_endpoint
+from viksa_ai.runtime import ViksaAuth, mcp_endpoint
 from viksa_ai.runtime.inject import to_module_source
 
 

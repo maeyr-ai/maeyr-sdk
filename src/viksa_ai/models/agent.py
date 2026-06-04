@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -153,7 +152,8 @@ class AgentGenerationResponse(BaseAgentData):
             queues = (self.chrona_queue.chrona_queues if self.chrona_queue else []) or []
             if not queues:
                 raise ValueError(
-                    "agent_type='secure' requires chrona_queue.chrona_queues with at least one queue"
+                    "agent_type='secure' requires chrona_queue.chrona_queues "
+                    "with at least one queue"
                 )
         return self
 

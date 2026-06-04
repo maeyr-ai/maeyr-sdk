@@ -55,9 +55,7 @@ class _ProjectClient:
         return await self._auth._client._arequest("GET", self._prefix, f"/{project_id}")
 
     async def update(self, project_id: str, body: Dict[str, Any]) -> Any:
-        return await self._auth._client._arequest(
-            "PUT", self._prefix, f"/{project_id}", json=body
-        )
+        return await self._auth._client._arequest("PUT", self._prefix, f"/{project_id}", json=body)
 
     async def delete(self, project_id: str) -> Any:
         return await self._auth._client._arequest("DELETE", self._prefix, f"/{project_id}")
@@ -161,9 +159,7 @@ class AuthClient:
         return await self._client._arequest("GET", self._prefix, "/sessions")
 
     async def revoke_session(self, session_id: str) -> Any:
-        return await self._client._arequest(
-            "DELETE", self._prefix, f"/sessions/{session_id}"
-        )
+        return await self._client._arequest("DELETE", self._prefix, f"/sessions/{session_id}")
 
     async def revoke_all_sessions(self) -> Any:
         return await self._client._arequest("DELETE", self._prefix, "/sessions")
@@ -204,14 +200,10 @@ class AuthClient:
         )
 
     async def revoke_api_key(self, key_id: str) -> Any:
-        return await self._client._arequest(
-            "POST", self._prefix, f"/key/api/{key_id}/revoke"
-        )
+        return await self._client._arequest("POST", self._prefix, f"/key/api/{key_id}/revoke")
 
     async def delete_api_key(self, key_id: str) -> Any:
-        return await self._client._arequest(
-            "DELETE", self._prefix, f"/key/api/{key_id}"
-        )
+        return await self._client._arequest("DELETE", self._prefix, f"/key/api/{key_id}")
 
     async def create_worker_key(self, name: str, description: Optional[str] = None) -> Any:
         return await self._client._arequest(

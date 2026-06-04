@@ -165,8 +165,8 @@ def _validate_code_structure(agent: AgentGenerationResponse, code: str) -> None:
             for ref in endpoint.inputs:
                 if ref.required and ref.input_ref not in keys:
                     raise AgentValidationError(
-                        f"Endpoint '{endpoint.name}': input '{ref.input_ref}' is marked required but "
-                        f"not read in this function."
+                        f"Endpoint '{endpoint.name}': input '{ref.input_ref}' "
+                        f"is marked required but not read in this function."
                     )
             used_input_names.update(keys)
         else:
@@ -195,7 +195,9 @@ def _validate_endpoint_references(agent: AgentGenerationResponse) -> None:
                     f"Endpoint '{endpoint.name}' references input '{input_ref.input_ref}' "
                     f"which is NOT declared in the global 'inputs' list."
                 )
-        unknown_outputs = [out for out in (endpoint.outputs or []) if out not in declared_output_names]
+        unknown_outputs = [
+            out for out in (endpoint.outputs or []) if out not in declared_output_names
+        ]
         if unknown_outputs:
             raise AgentValidationError(
                 f"Endpoint '{endpoint.name}' references unknown outputs {unknown_outputs}."

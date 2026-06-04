@@ -25,7 +25,6 @@ from viksa_ai.client.chat import ChatClient
 from viksa_ai.client.config import ClientConfig, RetryConfig
 from viksa_ai.client.errors import (
     ViksaApiError,
-    ViksaTransportError,
     raise_for_response,
     wrap_transport_error,
 )
@@ -222,8 +221,7 @@ class ViksaClient:
                 **kwargs,
             )
         raise ValueError(
-            "Set one of: VIKSA_API_KEY, VIKSA_ACCESS_TOKEN, or "
-            "VIKSA_EMAIL and VIKSA_PASSWORD"
+            "Set one of: VIKSA_API_KEY, VIKSA_ACCESS_TOKEN, or VIKSA_EMAIL and VIKSA_PASSWORD"
         )
 
     def _build_headers(self) -> Dict[str, str]:
@@ -257,7 +255,8 @@ class ViksaClient:
         """
         Low-level API call for routes not yet wrapped by a sub-client.
 
-        ``path_prefix`` is the gateway prefix (e.g. ``/builder``, ``/marketplace/api/v1/marketplace``).
+        ``path_prefix`` is the gateway prefix (e.g. ``/builder``,
+        ``/marketplace/api/v1/marketplace``).
         """
         return await self._arequest(
             method,
@@ -418,14 +417,10 @@ class ViksaClient:
         service = prefix.strip("/").split("/")[0] or prefix
         try:
             client = self._transport.get_async_client()
-            async with client.stream(
-                method, url, json=json_body, params=params
-            ) as response:
+            async with client.stream(method, url, json=json_body, params=params) as response:
                 if response.status_code >= 400:
                     await response.aread()
-                    raise_for_response(
-                        response, service=service, method=method, path=path
-                    )
+                    raise_for_response(response, service=service, method=method, path=path)
                 async for line in response.aiter_lines():
                     if not line or not line.startswith("data:"):
                         continue

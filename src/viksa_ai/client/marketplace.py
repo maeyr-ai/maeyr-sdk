@@ -14,9 +14,7 @@ class _ListingsClient:
         self._mp = marketplace
 
     async def create(self, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._mp._client._arequest(
-            "POST", self._mp._prefix, "/listings", json=body
-        )
+        return await self._mp._client._arequest("POST", self._mp._prefix, "/listings", json=body)
 
     async def search(self, **params: Any) -> Dict[str, Any]:
         return await self._mp._client._arequest(
@@ -36,11 +34,11 @@ class _ListingsClient:
         )
 
     async def get(self, listing_id: str) -> Dict[str, Any]:
-        return await self._mp._client._arequest(
-            "GET", self._mp._prefix, f"/listings/{listing_id}"
-        )
+        return await self._mp._client._arequest("GET", self._mp._prefix, f"/listings/{listing_id}")
 
-    async def publish(self, listing_id: str, body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def publish(
+        self, listing_id: str, body: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         return await self._mp._client._arequest(
             "POST",
             self._mp._prefix,
@@ -72,9 +70,7 @@ class _WorkforceClient:
         )
 
     async def get(self, listing_id: str) -> Dict[str, Any]:
-        return await self._mp._client._arequest(
-            "GET", self._mp._prefix, f"/workforce/{listing_id}"
-        )
+        return await self._mp._client._arequest("GET", self._mp._prefix, f"/workforce/{listing_id}")
 
     async def install(self, listing_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._mp._client._arequest(
@@ -115,6 +111,4 @@ class MarketplaceClient:
         return await self._client._arequest("GET", self._prefix, "/categories")
 
     async def installations(self, **params: Any) -> Dict[str, Any]:
-        return await self._client._arequest(
-            "GET", self._prefix, "/install", params=params or None
-        )
+        return await self._client._arequest("GET", self._prefix, "/install", params=params or None)

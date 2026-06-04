@@ -1,6 +1,6 @@
 """Pydantic models for platform API and agent manifests."""
 
-from viksa_ai.models.a2a import A2AEnvelope, A2AResponse, A2AStatus, A2A_PROTOCOL_VERSION
+from viksa_ai.models.a2a import A2A_PROTOCOL_VERSION, A2AEnvelope, A2AResponse, A2AStatus
 from viksa_ai.models.agent import (
     AgentEndpoint,
     AgentFile,
@@ -14,13 +14,15 @@ from viksa_ai.models.agent import (
     ExecutionConfig,
     InputType,
 )
-from viksa_ai.models.auth import TokenResponse, LoginRequest, RefreshRequest
+from viksa_ai.models.auth import LoginRequest, RefreshRequest, TokenResponse
 from viksa_ai.models.executor import (
     AgentInvokeRequest,
     AgentInvokeResponse,
-    AgentType as ExecutorAgentType,
     EndpointExecutionRequest,
     EndpointExecutionResponse,
+)
+from viksa_ai.models.executor import (
+    AgentType as ExecutorAgentType,
 )
 
 __all__ = [
