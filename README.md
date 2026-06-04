@@ -19,7 +19,6 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 ## Table of contents
 
 - [Installation](#installation)
-- [Monorepo workspace](#monorepo-workspace)
 - [Quick start](#quick-start)
 - [Agent runtime](#agent-runtime)
   - [mcp_endpoint](#mcp_endpoint)
@@ -57,25 +56,6 @@ pip install "viksa-ai[dev]"
 
 ---
 
-## Monorepo workspace
-
-This repository lives in the Viksa multi-repo workspace:
-
-```text
-viksa-ai-workspace/
-├── viksa-sdk/          # this package
-├── builder-service/    # injects ViksaAI.py via viksa-ai
-├── chat-service/       # AI agent generation + SDK injection
-├── auth-service/
-└── ...
-```
-
-Sync all repos (including `viksa-sdk`) from the workspace root:
-
-```bash
-./git-all.sh pull
-./git-all.sh status
-```
 
 **Local editable install** (use SDK changes before a PyPI release):
 
