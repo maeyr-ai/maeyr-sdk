@@ -353,6 +353,43 @@ def agent_doc_to_tools(
     return tools
 
 
+def _schema_types(prop_schema: Dict[str, Any]) -> set[str]:
+    """Return JSON Schema ``type`` value(s) for an output property."""
+    prop_type = prop_schema.get("type")
+    if prop_type is None:
+        return set()
+    if isinstance(prop_type, str):
+        return {prop_type}
+    return {str(t) for t in prop_type}
+
+
+def _default_value_for_output_property(prop_schema: Dict[str, Any]) -> Any:
+    """
+    Synthesize a JSON value for a missing output field so MCP output validation passes.
+
+    Legacy manifests often list ``error`` as a required ``string`` even on success;
+    an empty string satisfies that schema without changing agent code.
+    """
+    types = _schema_types(prop_schema)
+    if not types:
+        return None
+    if "null" in types:
+        return None
+    if "string" in types:
+        return ""
+    if "array" in types:
+        return []
+    if "object" in types:
+        return {}
+    if "boolean" in types:
+        return False
+    if "integer" in types:
+        return 0
+    if "number" in types:
+        return 0.0
+    return None
+
+
 def _coerce_response_payload(payload: Any) -> Any:
     """Parse JSON strings and normalize None from pulse executor."""
     if payload is None:
@@ -405,10 +442,7 @@ def structured_execution_result(
     for prop_name, prop_schema in properties.items():
         if prop_name in result:
             continue
-        prop_type = prop_schema.get("type")
-        allows_null = prop_type == "null" or (isinstance(prop_type, list) and "null" in prop_type)
-        if allows_null:
-            result[prop_name] = None
+        result[prop_name] = _default_value_for_output_property(prop_schema)
     return result
 
 

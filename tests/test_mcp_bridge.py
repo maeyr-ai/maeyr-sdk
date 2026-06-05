@@ -299,6 +299,23 @@ def test_structured_execution_result_fills_nullable_outputs():
     }
 
 
+def test_structured_execution_result_satisfies_legacy_required_error_string():
+    """Pre-0.2.7 manifests required error:string on every response."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "flights": {"type": "array"},
+            "error": {"type": "string", "description": "Error message if request fails"},
+        },
+        "required": ["flights", "error"],
+    }
+    payload = {"flights": [{"flight": "6E7587"}]}
+    assert structured_execution_result(payload, schema) == {
+        "flights": [{"flight": "6E7587"}],
+        "error": "",
+    }
+
+
 def test_collect_mapping_ids_from_agent():
     ids = collect_mapping_ids([SAMPLE_AGENT])
     assert ids == ["repos"]
