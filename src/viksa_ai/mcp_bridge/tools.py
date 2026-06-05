@@ -328,9 +328,7 @@ def structured_execution_result(
             return data
         for wrapper in ("response", "result", "data", "output"):
             inner = data.get(wrapper)
-            if isinstance(inner, dict) and (
-                not required or all(key in inner for key in required)
-            ):
+            if isinstance(inner, dict) and (not required or all(key in inner for key in required)):
                 return inner
 
     if len(required) == 1:
