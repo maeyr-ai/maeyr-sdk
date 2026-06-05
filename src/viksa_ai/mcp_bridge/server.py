@@ -232,7 +232,7 @@ def create_mcp_server(
 
         init_options = InitializationOptions(
             server_name="viksa-mcp-bridge",
-            server_version="0.2.5",
+            server_version="0.2.6",
             capabilities=server.get_capabilities(
                 notification_options=NotificationOptions(),
                 experimental_capabilities={},
