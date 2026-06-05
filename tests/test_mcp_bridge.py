@@ -170,6 +170,135 @@ def test_structured_execution_result_parses_json_string():
     assert structured_execution_result(payload, schema) == {"issues": [{"id": 1}]}
 
 
+def test_output_schema_omits_nullable_from_required():
+    agent = {
+        **SAMPLE_AGENT,
+        "outputs": [
+            {"name": "flights", "type": "list", "description": "Flight rows"},
+            {"name": "error", "type": "string", "description": "Error text", "nullable": True},
+        ],
+        "agent_endpoints": [
+            {
+                **SAMPLE_AGENT["agent_endpoints"][0],
+                "name": "get_flights_between",
+                "outputs": ["flights", "error"],
+            }
+        ],
+    }
+    tools = agent_doc_to_tools(agent)
+    schema = tools[0].output_schema
+    assert schema is not None
+    assert schema["required"] == ["flights"]
+    assert schema["properties"]["error"]["type"] == ["string", "null"]
+
+
+def test_output_schema_uses_declared_scalar_types():
+    agent = {
+        **SAMPLE_AGENT,
+        "outputs": [
+            {"name": "health", "type": "string", "description": "Cluster health"},
+            {"name": "disk_usage_percent", "type": "float", "description": "Disk %"},
+        ],
+        "agent_endpoints": [
+            {
+                "name": "get_health",
+                "module": "main",
+                "description": "Health",
+                "status": "enabled",
+                "inputs": [],
+                "outputs": ["health"],
+            }
+        ],
+    }
+    tools = agent_doc_to_tools(agent)
+    schema = tools[0].output_schema
+    assert schema["properties"]["health"]["type"] == "string"
+
+
+def test_dict_output_schema_accepts_any_json_value():
+    """Agents often declare dict for scalar returns; bridge must not force object type."""
+    agent = {
+        **SAMPLE_AGENT,
+        "outputs": [
+            {"name": "health", "type": "dict", "description": "Cluster health"},
+            {"name": "disk_usage_percent", "type": "dict", "description": "Disk %"},
+        ],
+        "agent_endpoints": [
+            {
+                "name": "get_health",
+                "module": "main",
+                "description": "Health",
+                "status": "enabled",
+                "inputs": [],
+                "outputs": ["health"],
+            }
+        ],
+    }
+    schema = agent_doc_to_tools(agent)[0].output_schema
+    health_schema = schema["properties"]["health"]
+    assert "type" not in health_schema
+    assert structured_execution_result({"health": "green"}, schema) == {"health": "green"}
+    assert structured_execution_result(
+        {"disk_usage_percent": 77},
+        agent_doc_to_tools(
+            {
+                **agent,
+                "agent_endpoints": [
+                    {
+                        "name": "get_disk",
+                        "module": "main",
+                        "description": "Disk",
+                        "status": "enabled",
+                        "inputs": [],
+                        "outputs": ["disk_usage_percent"],
+                    }
+                ],
+            }
+        )[0].output_schema,
+    ) == {"disk_usage_percent": 77}
+
+
+def test_output_schema_infers_type_from_example():
+    agent = {
+        **SAMPLE_AGENT,
+        "outputs": [
+            {
+                "name": "time_in_given_tz",
+                "type": "dict",
+                "example": "2026-06-06T01:35:34+05:30",
+            }
+        ],
+        "agent_endpoints": [
+            {
+                "name": "get_time",
+                "module": "main",
+                "description": "Time",
+                "status": "enabled",
+                "inputs": [],
+                "outputs": ["time_in_given_tz"],
+            }
+        ],
+    }
+    schema = agent_doc_to_tools(agent)[0].output_schema
+    assert schema["properties"]["time_in_given_tz"]["type"] == "string"
+
+
+def test_structured_execution_result_fills_nullable_outputs():
+    schema = {
+        "type": "object",
+        "properties": {
+            "flights": {"type": "array"},
+            "error": {"type": ["string", "null"]},
+        },
+        "required": ["flights"],
+    }
+    payload = {"flights": [{"id": 1}]}
+    assert structured_execution_result(payload, schema) == {
+        "flights": [{"id": 1}],
+        "error": None,
+    }
+
+
 def test_collect_mapping_ids_from_agent():
     ids = collect_mapping_ids([SAMPLE_AGENT])
     assert ids == ["repos"]
