@@ -12,6 +12,7 @@ from viksa_ai.mcp_bridge.registry import AgentMeta, BridgeRegistry, build_regist
 from viksa_ai.mcp_bridge.tools import (
     agent_doc_to_tools,
     make_tool_name,
+    resolve_task_queue,
     sanitize_tool_segment,
     structured_execution_result,
 )
@@ -100,6 +101,43 @@ def test_agent_doc_to_tools_skips_disabled_and_builds_schemas():
     assert "Mapping 'repos'" in repo_prop["description"]
     assert "Note:" in repo_prop["description"]
     assert spec.input_schema["required"] == ["repo"]
+
+
+def test_resolve_task_queue_cloud_agent():
+    assert (
+        resolve_task_queue(
+            agent_type="cloud",
+            org_id="OI-ORG",
+            project_id="PI-PROJ",
+        )
+        == "OI-ORG-PI-PROJ-CLOUD"
+    )
+
+
+def test_resolve_task_queue_secure_agent_uses_prefixed_queue():
+    assert (
+        resolve_task_queue(
+            agent_type="secure",
+            chrona_queue={"chrona_queues": ["worker-a"]},
+            org_id="OI-ORG",
+            project_id="PI-PROJ",
+        )
+        == "OI-ORG-PI-PROJ-worker-a"
+    )
+
+
+def test_agent_doc_to_tools_sets_prefixed_task_queue():
+    doc = {
+        **SAMPLE_AGENT,
+        "agent_type": "cloud",
+        "chrona_queue": {"chrona_queues": ["ignored-for-cloud"]},
+    }
+    tools = agent_doc_to_tools(
+        doc,
+        org_id="OI-ORG",
+        project_id="PI-PROJ",
+    )
+    assert tools[0].task_queue == "OI-ORG-PI-PROJ-CLOUD"
 
 
 def test_structured_execution_result_from_agent_dict():

@@ -13,6 +13,7 @@ from viksa_ai.mcp_bridge.registry import BridgeRegistry, refresh_registry
 from viksa_ai.mcp_bridge.tools import (
     ViksaToolSpec,
     format_execution_result,
+    resolve_task_queue,
     structured_execution_result,
 )
 from viksa_ai.models.executor import AgentType, EndpointExecutionRequest
@@ -106,15 +107,31 @@ def create_mcp_server(
             raise ValueError(f"Unknown Viksa tool: {name}")
 
         wants_structured = spec.output_schema is not None
+        if not client.org_id or not client.project_id:
+            return _tool_error(
+                "VIKSA_ORG_ID and VIKSA_PROJECT_ID are required for agent execution",
+                structured=wants_structured,
+            )
+
         payload = arguments or {}
         agent_type = AgentType.SECURE if spec.agent_type == "secure" else AgentType.CLOUD
+        task_queue = spec.task_queue or resolve_task_queue(
+            agent_type=spec.agent_type,
+            org_id=client.org_id,
+            project_id=client.project_id,
+        )
+        if not task_queue:
+            return _tool_error(
+                "Could not resolve Temporal task_queue for this agent",
+                structured=wants_structured,
+            )
 
         request = EndpointExecutionRequest(
             agent_id=spec.agent_id,
             agent_type=agent_type,
             endpoint=spec.endpoint,
             inputs=payload,
-            task_queue=spec.task_queue,
+            task_queue=task_queue,
             timeout=spec.timeout,
         )
 

@@ -55,6 +55,41 @@ def endpoint_path(agent_alias: str, module: str, endpoint_name: str) -> str:
     return f"{agent_alias}.{module}.{endpoint_name}"
 
 
+def _chrona_queue_names(chrona_queue: Any) -> List[str]:
+    if isinstance(chrona_queue, dict):
+        return [str(q) for q in (chrona_queue.get("chrona_queues") or []) if q]
+    if isinstance(chrona_queue, str) and chrona_queue.strip():
+        return [chrona_queue.strip()]
+    return []
+
+
+def resolve_task_queue(
+    *,
+    agent_type: str,
+    chrona_queue: Any = None,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Build the Temporal task queue the same way chat-service does.
+
+    Cloud agents always use ``{org_id}-{project_id}-CLOUD``. Secure agents use
+    ``{org_id}-{project_id}-{queue}`` from ``chrona_queue.chrona_queues``.
+    """
+    if not org_id or not project_id:
+        return None
+
+    cloud_default = f"{org_id}-{project_id}-CLOUD"
+    normalized_type = str(agent_type or "cloud").lower()
+    if normalized_type == "cloud":
+        return cloud_default
+
+    queues = _chrona_queue_names(chrona_queue)
+    if queues:
+        return f"{org_id}-{project_id}-{queues[0]}"
+    return cloud_default
+
+
 @dataclass(frozen=True)
 class ViksaToolSpec:
     """Execution metadata for one Viksa endpoint exposed as an MCP tool."""
@@ -188,6 +223,8 @@ def agent_doc_to_tools(
     agent_doc: Dict[str, Any],
     *,
     mappings_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
 ) -> List[ViksaToolSpec]:
     """Convert a builder agent detail document into MCP tool specs."""
     agent_id = str(agent_doc.get("_id") or agent_doc.get("id") or "")
@@ -197,11 +234,13 @@ def agent_doc_to_tools(
     agent_outputs = list(agent_doc.get("outputs") or [])
     endpoints = list(agent_doc.get("agent_endpoints") or [])
 
-    task_queue: Optional[str] = None
-    chrona_queue = agent_doc.get("chrona_queue") or {}
-    queues = chrona_queue.get("chrona_queues") or []
-    if queues:
-        task_queue = str(queues[0])
+    chrona_queue = agent_doc.get("chrona_queue")
+    task_queue = resolve_task_queue(
+        agent_type=agent_type,
+        chrona_queue=chrona_queue,
+        org_id=org_id,
+        project_id=project_id,
+    )
 
     tools: List[ViksaToolSpec] = []
     for ep in endpoints:
