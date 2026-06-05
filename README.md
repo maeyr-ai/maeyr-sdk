@@ -12,6 +12,7 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 | [`viksa_ai.runtime`](#agent-runtime) | Same API as injected `ViksaAI.py` (`mcp_endpoint`, `ViksaAuth`, A2A `context()`) |
 | [`viksa_ai.client`](#platform-http-client) | Typed async HTTP client for `https://api.viksaai.com` |
 | [`viksa_ai.devtools`](#development-tooling) | AST + schema validation for generated agents |
+| [`viksa_ai.mcp_bridge`](#mcp-bridge-cursor--claude) | Expose deployed Viksa agents as MCP tools (stdio) |
 | [`viksa_ai.models`](#data-models) | Pydantic models for API requests and A2A envelopes |
 
 ---
@@ -30,6 +31,7 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
   - [ViksaClient reference](#viksaclient-reference)
   - [Errors](#errors)
   - [SSE streaming](#sse-streaming)
+- [MCP bridge (Cursor / Claude)](#mcp-bridge-cursor--claude)
 - [Development tooling](#development-tooling)
 - [Data models](#data-models)
 - [Examples](#examples)
@@ -285,7 +287,7 @@ Sub-clients are created on the root client:
 ```text
 ViksaClient
 ├── auth (+ auth.orgs, auth.projects)
-├── builder.agents | deploy | secrets | mcp
+├── builder.agents | deploy | secrets | mappings | mcp
 ├── chat (+ triggers, approvals)
 ├── pulse
 ├── workflow.executions
@@ -345,6 +347,13 @@ Use `client.request(method, prefix, path)` for any route not yet wrapped.
 | `create_secret(name, value, description=...)` | `POST /secret/create` | Create vault secret |
 | `list_secrets(skip, limit, search)` | `GET /secret/list` | List secrets |
 | `get_secret(secret_id)` | `GET /secret/{id}` | Get secret metadata/value |
+
+#### `client.builder.mappings`
+
+| Method | HTTP | Description |
+|--------|------|-------------|
+| `get(mapping_id)` | `GET /mappings/{id}` | Mapping detail |
+| `get_many(mapping_ids)` | parallel `GET` | Up to 100 mappings (used by MCP bridge) |
 
 #### `client.builder.mcp`
 
@@ -532,6 +541,87 @@ async for conv in client.chat.iter_conversations():
 async for event in client.chat.stream_indent_finder("Find my last deployment"):
     print(event)
 ```
+
+---
+
+## MCP bridge (Cursor / Claude)
+
+Expose **deployed** Viksa agent endpoints as native MCP tools in Cursor, Claude Desktop, or any stdio MCP client.
+
+```bash
+pip install "viksa-ai[mcp]"
+```
+
+### Run the bridge
+
+Single agent by id:
+
+```bash
+export VIKSA_API_KEY="vk_..."
+export VIKSA_ORG_ID="..."
+export VIKSA_PROJECT_ID="..."
+
+viksa-mcp-bridge --agent-id YOUR_AGENT_ID
+```
+
+Or by alias / all deployed agents in the project:
+
+```bash
+viksa-mcp-bridge --agent-alias github_mcp_agent
+viksa-mcp-bridge --all-deployed
+```
+
+Each enabled endpoint becomes a tool named `viksa.{agent_alias}.{endpoint_name}`
+(or `viksa.{agent_alias}.{endpoint_name}.{id_suffix}` when multiple agents collide).
+Tool calls are proxied to `POST /pulse/executor/execute`.
+
+The bridge resolves the full agent manifest from builder-service:
+
+| Manifest field | MCP surface |
+|----------------|-------------|
+| `agent_endpoints[]` | One MCP tool per enabled endpoint |
+| `inputs[]` + endpoint `inputs[].input_ref` | Tool `inputSchema` (types, defaults, validation) |
+| `inputs[].mapping_id` | Fetched from `/mappings/{id}`; hints in schema + `viksa://mappings` resource |
+| `outputs[]` + endpoint `outputs[]` | Tool `outputSchema` |
+| `ai_guidelines` | Server `instructions` + `viksa://agent/{id}/guidelines` resource |
+
+Registry refreshes from the platform every 60 seconds by default (`--refresh-interval 0` to disable).
+
+### Cursor configuration
+
+Add to `.cursor/mcp.json` (or Cursor MCP settings):
+
+```json
+{
+  "mcpServers": {
+    "viksa": {
+      "command": "viksa-mcp-bridge",
+      "args": ["--agent-id", "YOUR_AGENT_ID"],
+      "env": {
+        "VIKSA_API_KEY": "vk_...",
+        "VIKSA_ORG_ID": "...",
+        "VIKSA_PROJECT_ID": "...",
+        "VIKSA_BASE_URL": "https://api.viksaai.com"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop configuration
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) using the same `mcpServers` block as above.
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `VIKSA_API_KEY` | Project API key (recommended) |
+| `VIKSA_ORG_ID` / `VIKSA_PROJECT_ID` | Tenant scope |
+| `VIKSA_AGENT_ID` | Default agent when `--agent-id` is omitted |
+| `VIKSA_AGENT_ALIAS` | Default agent when `--agent-alias` is omitted |
+| `VIKSA_MCP_ALL_DEPLOYED` | Set to `1` / `true` to expose all deployed agents |
+| `VIKSA_MCP_REFRESH_INTERVAL` | Registry refresh seconds (default `60`; `0` disables) |
 
 ---
 
