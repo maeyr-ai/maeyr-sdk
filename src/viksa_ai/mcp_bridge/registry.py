@@ -49,11 +49,13 @@ class BridgeRegistry:
                 "and that https://api.viksaai.com is reachable."
             )
             lines.append("")
-        lines.extend([
-            "Viksa AI agent endpoints exposed as MCP tools.",
-            "Each tool maps to a deployed Viksa agent function.",
-            "Read viksa://mappings for input shortcut resolution.",
-        ])
+        lines.extend(
+            [
+                "Viksa AI agent endpoints exposed as MCP tools.",
+                "Each tool maps to a deployed Viksa agent function.",
+                "Read viksa://mappings for input shortcut resolution.",
+            ]
+        )
         for meta in self.agents.values():
             if meta.ai_guidelines:
                 lines.append(

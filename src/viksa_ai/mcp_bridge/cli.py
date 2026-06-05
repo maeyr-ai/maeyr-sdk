@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Expose Viksa agent endpoints as an MCP server (stdio) "
-            "for Cursor or Claude Desktop"
+            "Expose Viksa agent endpoints as an MCP server (stdio) for Cursor or Claude Desktop"
         ),
     )
     target = parser.add_mutually_exclusive_group(required=False)
