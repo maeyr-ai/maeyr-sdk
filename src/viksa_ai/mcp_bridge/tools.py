@@ -9,7 +9,8 @@ from typing import Any, Dict, List, Optional
 
 from viksa_ai.mcp_bridge.mappings import mapping_hint_text
 
-_TOOL_SEGMENT_RE = re.compile(r"[^A-Za-z0-9._-]")
+# MCP tool names: alphanumeric + underscores only (Cursor and other clients reject dots).
+_TOOL_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_]")
 _TOOL_PREFIX = "viksa"
 
 _JSON_TYPE_MAP: Dict[str, Dict[str, Any]] = {
@@ -25,6 +26,7 @@ _JSON_TYPE_MAP: Dict[str, Dict[str, Any]] = {
 def sanitize_tool_segment(value: str) -> str:
     """Keep only characters allowed in MCP tool names."""
     cleaned = _TOOL_SEGMENT_RE.sub("_", value.strip())
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     return cleaned or "unnamed"
 
 
@@ -44,10 +46,10 @@ def make_tool_name(
     """Build a stable MCP tool name for a Viksa endpoint."""
     alias = sanitize_tool_segment(agent_alias)
     name = sanitize_tool_segment(endpoint_name)
-    tool = f"{_TOOL_PREFIX}.{alias}.{name}"
+    parts = [_TOOL_PREFIX, alias, name]
     if disambiguate and agent_id:
-        tool = f"{tool}.{sanitize_tool_segment(short_agent_id(agent_id))}"
-    return tool
+        parts.append(sanitize_tool_segment(short_agent_id(agent_id)))
+    return "_".join(parts)
 
 
 def endpoint_path(agent_alias: str, module: str, endpoint_name: str) -> str:
