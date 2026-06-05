@@ -102,7 +102,10 @@ async def _async_main(argv: list[str] | None = None) -> int:
     async with client:
         await refresh_registry(registry, client, target)
         if registry.load_error:
-            logger.error("Initial Viksa load failed (MCP server will still start): %s", registry.load_error)
+            logger.error(
+                "Initial Viksa load failed (MCP server will still start): %s",
+                registry.load_error,
+            )
         else:
             logger.info("Loaded %d Viksa tool(s)", len(registry.tools))
         server = create_mcp_server(
