@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 (2026-06-06)
+
+- MCP bridge: use underscore tool names (`viksa_{alias}_{endpoint}`) for Cursor and other MCP clients that reject dots
+
 ## 0.2.4 (2026-06-06)
 
 - Fix builder HTTP client paths: all routes now use `/builder/...` gateway prefix (fixes MCP bridge 404s)
