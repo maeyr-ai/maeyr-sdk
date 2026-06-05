@@ -128,6 +128,66 @@ class ViksaToolSpec:
         )
 
 
+def _infer_schema_from_example(example: Any) -> Optional[Dict[str, Any]]:
+    """Infer a JSON Schema fragment from an agent output ``example`` value."""
+    if example is None:
+        return None
+    if isinstance(example, bool):
+        return {"type": "boolean"}
+    if isinstance(example, int):
+        return {"type": "integer"}
+    if isinstance(example, float):
+        return {"type": "number"}
+    if isinstance(example, str):
+        return {"type": "string"}
+    if isinstance(example, list):
+        return {"type": "array"}
+    if isinstance(example, dict):
+        return {"type": "object"}
+    return None
+
+
+def _apply_nullable_to_schema(prop: Dict[str, Any]) -> Dict[str, Any]:
+    """Extend a JSON Schema property so ``null`` is an allowed value."""
+    if "oneOf" in prop or "anyOf" in prop:
+        return prop
+    base_type = prop.get("type")
+    if isinstance(base_type, str):
+        prop["type"] = [base_type, "null"]
+    elif isinstance(base_type, list) and "null" not in base_type:
+        prop["type"] = [*base_type, "null"]
+    return prop
+
+
+def _output_property_schema(agent_output: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Map a builder ``AgentOutput`` to a JSON Schema property.
+
+    Agents often declare ``type: dict`` for scalar or mixed JSON payloads. The
+    bridge advertises an unconstrained schema for those fields so MCP clients
+    accept the real runtime shape (string, number, object, etc.).
+    """
+    raw_type = str(agent_output.get("type", "string")).lower()
+    nullable = bool(agent_output.get("nullable", False))
+
+    inferred = _infer_schema_from_example(agent_output.get("example"))
+    if inferred is not None:
+        prop: Dict[str, Any] = dict(inferred)
+    elif raw_type == "dict":
+        # Empty schema accepts any JSON value (JSON Schema: unconstrained object).
+        prop = {}
+    else:
+        prop = dict(_JSON_TYPE_MAP.get(raw_type, {"type": "string"}))
+
+    if agent_output.get("description"):
+        prop["description"] = agent_output["description"]
+    if agent_output.get("format") and "oneOf" not in prop and "anyOf" not in prop:
+        prop["format"] = agent_output["format"]
+    if nullable:
+        prop = _apply_nullable_to_schema(prop)
+    return prop
+
+
 def _output_schema_for_endpoint(
     agent_outputs: List[Dict[str, Any]],
     endpoint_output_names: List[str],
@@ -137,22 +197,21 @@ def _output_schema_for_endpoint(
 
     outputs_by_name = {item["name"]: item for item in agent_outputs if item.get("name")}
     properties: Dict[str, Any] = {}
+    required: List[str] = []
     for out_name in endpoint_output_names:
         agent_output = outputs_by_name.get(out_name)
         if agent_output:
-            raw_type = str(agent_output.get("type", "string")).lower()
-            prop: Dict[str, Any] = dict(_JSON_TYPE_MAP.get(raw_type, {"type": "string"}))
-            if agent_output.get("description"):
-                prop["description"] = agent_output["description"]
+            properties[out_name] = _output_property_schema(agent_output)
+            if not agent_output.get("nullable", False):
+                required.append(out_name)
         else:
-            prop = {"type": "string", "description": f"Agent output '{out_name}'"}
-        properties[out_name] = prop
+            properties[out_name] = {"type": "string", "description": f"Agent output '{out_name}'"}
+            required.append(out_name)
 
-    return {
-        "type": "object",
-        "properties": properties,
-        "required": list(endpoint_output_names),
-    }
+    schema: Dict[str, Any] = {"type": "object", "properties": properties}
+    if required:
+        schema["required"] = required
+    return schema
 
 
 def _input_schema_for_endpoint(
@@ -323,20 +382,34 @@ def structured_execution_result(
     properties = (output_schema or {}).get("properties") or {}
     required = (output_schema or {}).get("required") or list(properties.keys())
 
+    result: Dict[str, Any]
     if isinstance(data, dict):
         if not required or all(key in data for key in required):
-            return data
-        for wrapper in ("response", "result", "data", "output"):
-            inner = data.get(wrapper)
-            if isinstance(inner, dict) and (not required or all(key in inner for key in required)):
-                return inner
+            result = data
+        else:
+            result = data
+            for wrapper in ("response", "result", "data", "output"):
+                inner = data.get(wrapper)
+                if isinstance(inner, dict) and (
+                    not required or all(key in inner for key in required)
+                ):
+                    result = inner
+                    break
+    elif len(required) == 1:
+        result = {required[0]: data}
+    elif isinstance(data, dict):
+        result = data
+    else:
+        result = {"result": data}
 
-    if len(required) == 1:
-        return {required[0]: data}
-
-    if isinstance(data, dict):
-        return data
-    return {"result": data}
+    for prop_name, prop_schema in properties.items():
+        if prop_name in result:
+            continue
+        prop_type = prop_schema.get("type")
+        allows_null = prop_type == "null" or (isinstance(prop_type, list) and "null" in prop_type)
+        if allows_null:
+            result[prop_name] = None
+    return result
 
 
 def format_execution_result(payload: Any) -> str:

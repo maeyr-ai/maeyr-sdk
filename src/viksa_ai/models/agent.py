@@ -98,6 +98,9 @@ class AgentOutput(BaseModel):
         return v
 
     description: Optional[str] = None
+    nullable: bool = False
+    example: Optional[Any] = None
+    format: Optional[str] = None
 
 
 class EndpointInputRef(BaseModel):
@@ -178,4 +181,6 @@ class AgentUpdateRequest(BaseModel):
     agent_name: Optional[str] = None
     agent_description: Optional[str] = None
     files: Optional[List[AgentFile]] = None
+    inputs: Optional[List[AgentInput]] = None
+    outputs: Optional[List[AgentOutput]] = None
     agent_endpoints: Optional[List[AgentEndpoint]] = None

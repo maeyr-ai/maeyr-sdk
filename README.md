@@ -583,7 +583,7 @@ The bridge resolves the full agent manifest from builder-service:
 | `agent_endpoints[]` | One MCP tool per enabled endpoint |
 | `inputs[]` + endpoint `inputs[].input_ref` | Tool `inputSchema` (types, defaults, validation) |
 | `inputs[].mapping_id` | Fetched from `/mappings/{id}`; hints in schema + `viksa://mappings` resource |
-| `outputs[]` + endpoint `outputs[]` | Tool `outputSchema` |
+| `outputs[]` + endpoint `outputs[]` | Tool `outputSchema` (types + `nullable`; `dict` accepts any JSON value; optional outputs omitted from `required`) |
 | `ai_guidelines` | Server `instructions` + `viksa://agent/{id}/guidelines` resource |
 
 Registry refreshes from the platform every 60 seconds by default (`--refresh-interval 0` to disable).

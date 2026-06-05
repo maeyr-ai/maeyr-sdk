@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.7 (2026-06-06)
+
+- MCP bridge: honor `outputs[].nullable` in tool `outputSchema` (JSON Schema `["type", "null"]`, omit from `required`)
+- MCP bridge: fill absent nullable output fields with `null` in structured tool results
+- MCP bridge: treat builder `type: dict` outputs as unconstrained JSON Schema (accepts string/number/object at runtime)
+- MCP bridge: infer output JSON Schema types from `outputs[].example` when provided
+- SDK: `AgentOutput.nullable` / `AgentUpdateRequest.outputs` aligned with builder-service models
+
 ## 0.2.6 (2026-06-06)
 
 - MCP bridge: tool names use `{agent_alias}_{endpoint}` (no `viksa_` prefix) for Cursor length limits
