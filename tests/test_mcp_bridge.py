@@ -70,21 +70,21 @@ MAPPINGS = {
 
 
 def test_make_tool_name_uses_allowed_characters():
-    assert make_tool_name("my_agent", "list_items") == "viksa.my_agent.list_items"
-    assert sanitize_tool_segment("bad name!") == "bad_name_"
+    assert make_tool_name("my_agent", "list_items") == "viksa_my_agent_list_items"
+    assert sanitize_tool_segment("bad name!") == "bad_name"
 
 
 def test_make_tool_name_disambiguates_with_agent_id():
     name = make_tool_name("dup", "run", agent_id="agent-abc-999", disambiguate=True)
-    assert name.endswith(".agentabc999") or "999" in name
-    assert name.startswith("viksa.dup.run.")
+    assert name.endswith("agentabc999") or "999" in name
+    assert name.startswith("viksa_dup_run_")
 
 
 def test_agent_doc_to_tools_skips_disabled_and_builds_schemas():
     tools = agent_doc_to_tools(SAMPLE_AGENT, mappings_by_id=MAPPINGS)
     assert len(tools) == 1
     spec = tools[0]
-    assert spec.mcp_name == "viksa.github_mcp_agent.list_issues"
+    assert spec.mcp_name == "viksa_github_mcp_agent_list_issues"
     assert spec.endpoint == "github_mcp_agent.main.list_issues"
     assert spec.timeout == 120
     assert spec.read_only is True
@@ -166,7 +166,7 @@ async def test_build_registry_by_agent_id():
         client = ViksaClient("token", org_id="o1", project_id="p1", base_url="https://api.test")
         client._transport._async_client = http
         registry = await build_registry(client, BridgeTarget(agent_id="agent-123"))
-        assert "viksa.github_mcp_agent.list_issues" in registry.tools
+        assert "viksa_github_mcp_agent_list_issues" in registry.tools
         assert registry.mappings_catalog
         assert registry.agents["agent-123"].ai_guidelines
 
