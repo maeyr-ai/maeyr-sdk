@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.6 (2026-06-06)
+
+- MCP bridge: tool names use `{agent_alias}_{endpoint}` (no `viksa_` prefix) for Cursor length limits
+- MCP bridge: return structured MCP output when `outputSchema` is set
+- MCP bridge: resolve Temporal `task_queue` as `{org}-{project}-CLOUD` so pulse executions reach workers
+
 ## 0.2.5 (2026-06-06)
 
 - MCP bridge: use underscore tool names (`viksa_{alias}_{endpoint}`) for Cursor and other MCP clients that reject dots

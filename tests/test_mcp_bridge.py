@@ -9,7 +9,13 @@ from viksa_ai.client import ViksaClient
 from viksa_ai.mcp_bridge.discovery import BridgeTarget
 from viksa_ai.mcp_bridge.mappings import collect_mapping_ids, mapping_hint_text
 from viksa_ai.mcp_bridge.registry import AgentMeta, BridgeRegistry, build_registry
-from viksa_ai.mcp_bridge.tools import agent_doc_to_tools, make_tool_name, sanitize_tool_segment
+from viksa_ai.mcp_bridge.tools import (
+    agent_doc_to_tools,
+    make_tool_name,
+    resolve_task_queue,
+    sanitize_tool_segment,
+    structured_execution_result,
+)
 
 SAMPLE_AGENT = {
     "_id": "agent-123",
@@ -70,21 +76,22 @@ MAPPINGS = {
 
 
 def test_make_tool_name_uses_allowed_characters():
-    assert make_tool_name("my_agent", "list_items") == "viksa_my_agent_list_items"
+    assert make_tool_name("my_agent", "list_items") == "my_agent_list_items"
+    assert make_tool_name("github_mcp_agent", "list_issues") == "github_mcp_agent_list_issues"
     assert sanitize_tool_segment("bad name!") == "bad_name"
 
 
 def test_make_tool_name_disambiguates_with_agent_id():
     name = make_tool_name("dup", "run", agent_id="agent-abc-999", disambiguate=True)
     assert name.endswith("agentabc999") or "999" in name
-    assert name.startswith("viksa_dup_run_")
+    assert name.startswith("dup_run_")
 
 
 def test_agent_doc_to_tools_skips_disabled_and_builds_schemas():
     tools = agent_doc_to_tools(SAMPLE_AGENT, mappings_by_id=MAPPINGS)
     assert len(tools) == 1
     spec = tools[0]
-    assert spec.mcp_name == "viksa_github_mcp_agent_list_issues"
+    assert spec.mcp_name == "github_mcp_agent_list_issues"
     assert spec.endpoint == "github_mcp_agent.main.list_issues"
     assert spec.timeout == 120
     assert spec.read_only is True
@@ -94,6 +101,73 @@ def test_agent_doc_to_tools_skips_disabled_and_builds_schemas():
     assert "Mapping 'repos'" in repo_prop["description"]
     assert "Note:" in repo_prop["description"]
     assert spec.input_schema["required"] == ["repo"]
+
+
+def test_resolve_task_queue_cloud_agent():
+    assert (
+        resolve_task_queue(
+            agent_type="cloud",
+            org_id="OI-ORG",
+            project_id="PI-PROJ",
+        )
+        == "OI-ORG-PI-PROJ-CLOUD"
+    )
+
+
+def test_resolve_task_queue_secure_agent_uses_prefixed_queue():
+    assert (
+        resolve_task_queue(
+            agent_type="secure",
+            chrona_queue={"chrona_queues": ["worker-a"]},
+            org_id="OI-ORG",
+            project_id="PI-PROJ",
+        )
+        == "OI-ORG-PI-PROJ-worker-a"
+    )
+
+
+def test_agent_doc_to_tools_sets_prefixed_task_queue():
+    doc = {
+        **SAMPLE_AGENT,
+        "agent_type": "cloud",
+        "chrona_queue": {"chrona_queues": ["ignored-for-cloud"]},
+    }
+    tools = agent_doc_to_tools(
+        doc,
+        org_id="OI-ORG",
+        project_id="PI-PROJ",
+    )
+    assert tools[0].task_queue == "OI-ORG-PI-PROJ-CLOUD"
+
+
+def test_structured_execution_result_from_agent_dict():
+    schema = {
+        "type": "object",
+        "properties": {"flights": {"type": "array"}},
+        "required": ["flights"],
+    }
+    payload = {"flights": [{"flight": "AI101"}]}
+    assert structured_execution_result(payload, schema) == payload
+
+
+def test_structured_execution_result_unwraps_response_wrapper():
+    schema = {
+        "type": "object",
+        "properties": {"flights": {"type": "array"}},
+        "required": ["flights"],
+    }
+    payload = {"response": {"flights": []}, "meta": "ignored"}
+    assert structured_execution_result(payload, schema) == {"flights": []}
+
+
+def test_structured_execution_result_parses_json_string():
+    schema = {
+        "type": "object",
+        "properties": {"issues": {"type": "array"}},
+        "required": ["issues"],
+    }
+    payload = '{"issues": [{"id": 1}]}'
+    assert structured_execution_result(payload, schema) == {"issues": [{"id": 1}]}
 
 
 def test_collect_mapping_ids_from_agent():
@@ -166,7 +240,7 @@ async def test_build_registry_by_agent_id():
         client = ViksaClient("token", org_id="o1", project_id="p1", base_url="https://api.test")
         client._transport._async_client = http
         registry = await build_registry(client, BridgeTarget(agent_id="agent-123"))
-        assert "viksa_github_mcp_agent_list_issues" in registry.tools
+        assert "github_mcp_agent_list_issues" in registry.tools
         assert registry.mappings_catalog
         assert registry.agents["agent-123"].ai_guidelines
 

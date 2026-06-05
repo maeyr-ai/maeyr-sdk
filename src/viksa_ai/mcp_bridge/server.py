@@ -10,7 +10,12 @@ from typing import Optional
 from viksa_ai.client import ViksaApiError, ViksaClient
 from viksa_ai.mcp_bridge.discovery import BridgeTarget
 from viksa_ai.mcp_bridge.registry import BridgeRegistry, refresh_registry
-from viksa_ai.mcp_bridge.tools import ViksaToolSpec, format_execution_result
+from viksa_ai.mcp_bridge.tools import (
+    ViksaToolSpec,
+    format_execution_result,
+    resolve_task_queue,
+    structured_execution_result,
+)
 from viksa_ai.models.executor import AgentType, EndpointExecutionRequest
 
 logger = logging.getLogger(__name__)
@@ -71,8 +76,21 @@ def create_mcp_server(
         tools = await _tools_snapshot()
         return [spec.to_mcp_tool() for spec in tools.values()]
 
+    def _tool_error(
+        text: str,
+        *,
+        structured: bool,
+    ) -> types.CallToolResult | list[types.TextContent]:
+        content = [types.TextContent(type="text", text=text)]
+        if structured:
+            return types.CallToolResult(content=content, isError=True)
+        return content
+
     @server.call_tool()
-    async def handle_call_tool(name: str, arguments: dict | None) -> list[types.TextContent]:
+    async def handle_call_tool(
+        name: str,
+        arguments: dict | None,
+    ) -> dict | types.CallToolResult | list[types.TextContent]:
         async with registry._lock:
             load_error = registry.load_error
         if load_error:
@@ -88,15 +106,32 @@ def create_mcp_server(
         if spec is None:
             raise ValueError(f"Unknown Viksa tool: {name}")
 
+        wants_structured = spec.output_schema is not None
+        if not client.org_id or not client.project_id:
+            return _tool_error(
+                "VIKSA_ORG_ID and VIKSA_PROJECT_ID are required for agent execution",
+                structured=wants_structured,
+            )
+
         payload = arguments or {}
         agent_type = AgentType.SECURE if spec.agent_type == "secure" else AgentType.CLOUD
+        task_queue = spec.task_queue or resolve_task_queue(
+            agent_type=spec.agent_type,
+            org_id=client.org_id,
+            project_id=client.project_id,
+        )
+        if not task_queue:
+            return _tool_error(
+                "Could not resolve Temporal task_queue for this agent",
+                structured=wants_structured,
+            )
 
         request = EndpointExecutionRequest(
             agent_id=spec.agent_id,
             agent_type=agent_type,
             endpoint=spec.endpoint,
             inputs=payload,
-            task_queue=spec.task_queue,
+            task_queue=task_queue,
             timeout=spec.timeout,
         )
 
@@ -104,16 +139,17 @@ def create_mcp_server(
             result = await client.pulse.execute(request)
         except ViksaApiError as exc:
             message = exc.detail_message or str(exc)
-            return [
-                types.TextContent(
-                    type="text",
-                    text=f"Viksa API error ({exc.status_code}): {message}",
-                )
-            ]
+            return _tool_error(
+                f"Viksa API error ({exc.status_code}): {message}",
+                structured=wants_structured,
+            )
 
         if result.status != "success" or result.error:
             error_text = result.error or f"Execution failed with status '{result.status}'"
-            return [types.TextContent(type="text", text=error_text)]
+            return _tool_error(error_text, structured=wants_structured)
+
+        if wants_structured:
+            return structured_execution_result(result.response, spec.output_schema)
 
         body = format_execution_result(result.response)
         if result.duration_ms is not None:
@@ -196,7 +232,7 @@ def create_mcp_server(
 
         init_options = InitializationOptions(
             server_name="viksa-mcp-bridge",
-            server_version="0.2.3",
+            server_version="0.2.6",
             capabilities=server.get_capabilities(
                 notification_options=NotificationOptions(),
                 experimental_capabilities={},

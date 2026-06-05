@@ -124,7 +124,14 @@ async def build_registry(client: ViksaClient, target: BridgeTarget) -> BridgeReg
             agent_name=str(doc.get("agent_name") or doc.get("agent_alias") or ""),
             ai_guidelines=doc.get("ai_guidelines"),
         )
-        specs.extend(agent_doc_to_tools(doc, mappings_by_id=mappings))
+        specs.extend(
+            agent_doc_to_tools(
+                doc,
+                mappings_by_id=mappings,
+                org_id=client.org_id,
+                project_id=client.project_id,
+            )
+        )
 
     registry = BridgeRegistry()
     registry.agents = agents

@@ -11,7 +11,6 @@ from viksa_ai.mcp_bridge.mappings import mapping_hint_text
 
 # MCP tool names: alphanumeric + underscores only (Cursor and other clients reject dots).
 _TOOL_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_]")
-_TOOL_PREFIX = "viksa"
 
 _JSON_TYPE_MAP: Dict[str, Dict[str, Any]] = {
     "string": {"type": "string"},
@@ -43,10 +42,10 @@ def make_tool_name(
     agent_id: Optional[str] = None,
     disambiguate: bool = False,
 ) -> str:
-    """Build a stable MCP tool name for a Viksa endpoint."""
+    """Build MCP tool name: ``{agent_alias}_{endpoint_name}`` (no extra prefix)."""
     alias = sanitize_tool_segment(agent_alias)
     name = sanitize_tool_segment(endpoint_name)
-    parts = [_TOOL_PREFIX, alias, name]
+    parts = [alias, name]
     if disambiguate and agent_id:
         parts.append(sanitize_tool_segment(short_agent_id(agent_id)))
     return "_".join(parts)
@@ -54,6 +53,41 @@ def make_tool_name(
 
 def endpoint_path(agent_alias: str, module: str, endpoint_name: str) -> str:
     return f"{agent_alias}.{module}.{endpoint_name}"
+
+
+def _chrona_queue_names(chrona_queue: Any) -> List[str]:
+    if isinstance(chrona_queue, dict):
+        return [str(q) for q in (chrona_queue.get("chrona_queues") or []) if q]
+    if isinstance(chrona_queue, str) and chrona_queue.strip():
+        return [chrona_queue.strip()]
+    return []
+
+
+def resolve_task_queue(
+    *,
+    agent_type: str,
+    chrona_queue: Any = None,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Build the Temporal task queue the same way chat-service does.
+
+    Cloud agents always use ``{org_id}-{project_id}-CLOUD``. Secure agents use
+    ``{org_id}-{project_id}-{queue}`` from ``chrona_queue.chrona_queues``.
+    """
+    if not org_id or not project_id:
+        return None
+
+    cloud_default = f"{org_id}-{project_id}-CLOUD"
+    normalized_type = str(agent_type or "cloud").lower()
+    if normalized_type == "cloud":
+        return cloud_default
+
+    queues = _chrona_queue_names(chrona_queue)
+    if queues:
+        return f"{org_id}-{project_id}-{queues[0]}"
+    return cloud_default
 
 
 @dataclass(frozen=True)
@@ -189,6 +223,8 @@ def agent_doc_to_tools(
     agent_doc: Dict[str, Any],
     *,
     mappings_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
 ) -> List[ViksaToolSpec]:
     """Convert a builder agent detail document into MCP tool specs."""
     agent_id = str(agent_doc.get("_id") or agent_doc.get("id") or "")
@@ -198,11 +234,13 @@ def agent_doc_to_tools(
     agent_outputs = list(agent_doc.get("outputs") or [])
     endpoints = list(agent_doc.get("agent_endpoints") or [])
 
-    task_queue: Optional[str] = None
-    chrona_queue = agent_doc.get("chrona_queue") or {}
-    queues = chrona_queue.get("chrona_queues") or []
-    if queues:
-        task_queue = str(queues[0])
+    chrona_queue = agent_doc.get("chrona_queue")
+    task_queue = resolve_task_queue(
+        agent_type=agent_type,
+        chrona_queue=chrona_queue,
+        org_id=org_id,
+        project_id=project_id,
+    )
 
     tools: List[ViksaToolSpec] = []
     for ep in endpoints:
@@ -254,6 +292,53 @@ def agent_doc_to_tools(
             )
         )
     return tools
+
+
+def _coerce_response_payload(payload: Any) -> Any:
+    """Parse JSON strings and normalize None from pulse executor."""
+    if payload is None:
+        return {}
+    if isinstance(payload, str):
+        stripped = payload.strip()
+        if stripped.startswith("{") or stripped.startswith("["):
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError:
+                return stripped
+        return payload
+    return payload
+
+
+def structured_execution_result(
+    payload: Any,
+    output_schema: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Coerce pulse ``response`` into a dict for MCP ``structuredContent``.
+
+    When ``outputSchema`` is advertised, MCP clients require structured output
+    (not text-only). This maps common executor shapes onto the schema fields.
+    """
+    data = _coerce_response_payload(payload)
+    properties = (output_schema or {}).get("properties") or {}
+    required = (output_schema or {}).get("required") or list(properties.keys())
+
+    if isinstance(data, dict):
+        if not required or all(key in data for key in required):
+            return data
+        for wrapper in ("response", "result", "data", "output"):
+            inner = data.get(wrapper)
+            if isinstance(inner, dict) and (
+                not required or all(key in inner for key in required)
+            ):
+                return inner
+
+    if len(required) == 1:
+        return {required[0]: data}
+
+    if isinstance(data, dict):
+        return data
+    return {"result": data}
 
 
 def format_execution_result(payload: Any) -> str:
