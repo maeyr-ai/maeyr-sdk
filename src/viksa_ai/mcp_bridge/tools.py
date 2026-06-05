@@ -11,7 +11,6 @@ from viksa_ai.mcp_bridge.mappings import mapping_hint_text
 
 # MCP tool names: alphanumeric + underscores only (Cursor and other clients reject dots).
 _TOOL_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_]")
-_TOOL_PREFIX = "viksa"
 
 _JSON_TYPE_MAP: Dict[str, Dict[str, Any]] = {
     "string": {"type": "string"},
@@ -43,10 +42,10 @@ def make_tool_name(
     agent_id: Optional[str] = None,
     disambiguate: bool = False,
 ) -> str:
-    """Build a stable MCP tool name for a Viksa endpoint."""
+    """Build MCP tool name: ``{agent_alias}_{endpoint_name}`` (no extra prefix)."""
     alias = sanitize_tool_segment(agent_alias)
     name = sanitize_tool_segment(endpoint_name)
-    parts = [_TOOL_PREFIX, alias, name]
+    parts = [alias, name]
     if disambiguate and agent_id:
         parts.append(sanitize_tool_segment(short_agent_id(agent_id)))
     return "_".join(parts)
@@ -254,6 +253,53 @@ def agent_doc_to_tools(
             )
         )
     return tools
+
+
+def _coerce_response_payload(payload: Any) -> Any:
+    """Parse JSON strings and normalize None from pulse executor."""
+    if payload is None:
+        return {}
+    if isinstance(payload, str):
+        stripped = payload.strip()
+        if stripped.startswith("{") or stripped.startswith("["):
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError:
+                return stripped
+        return payload
+    return payload
+
+
+def structured_execution_result(
+    payload: Any,
+    output_schema: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Coerce pulse ``response`` into a dict for MCP ``structuredContent``.
+
+    When ``outputSchema`` is advertised, MCP clients require structured output
+    (not text-only). This maps common executor shapes onto the schema fields.
+    """
+    data = _coerce_response_payload(payload)
+    properties = (output_schema or {}).get("properties") or {}
+    required = (output_schema or {}).get("required") or list(properties.keys())
+
+    if isinstance(data, dict):
+        if not required or all(key in data for key in required):
+            return data
+        for wrapper in ("response", "result", "data", "output"):
+            inner = data.get(wrapper)
+            if isinstance(inner, dict) and (
+                not required or all(key in inner for key in required)
+            ):
+                return inner
+
+    if len(required) == 1:
+        return {required[0]: data}
+
+    if isinstance(data, dict):
+        return data
+    return {"result": data}
 
 
 def format_execution_result(payload: Any) -> str:

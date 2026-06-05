@@ -571,9 +571,9 @@ viksa-mcp-bridge --agent-alias github_mcp_agent
 viksa-mcp-bridge --all-deployed
 ```
 
-Each enabled endpoint becomes a tool named `viksa_{agent_alias}_{endpoint_name}`
-(or `viksa_{agent_alias}_{endpoint_name}_{id_suffix}` when multiple agents collide).
-Names use only letters, numbers, and underscores for MCP client compatibility.
+Each enabled endpoint becomes a tool named `{agent_alias}_{endpoint_name}` with
+no extra prefix. Use a short MCP server name in `mcp.json` (e.g. `vall`) so
+server+tool length stays within Cursor's 60-character limit.
 Tool calls are proxied to `POST /pulse/executor/execute`.
 
 The bridge resolves the full agent manifest from builder-service:
