@@ -28,4 +28,5 @@ async def test_api_error_on_404():
         with pytest.raises(ViksaNotFoundError) as exc:
             await client.builder.agents.get("missing")
         assert exc.value.status_code == 404
+        assert exc.value.path == "/agent/missing"
         assert exc.value.request_id is None or isinstance(exc.value.request_id, str)

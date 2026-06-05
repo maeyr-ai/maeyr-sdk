@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.4 (2026-06-06)
+
+- Fix builder HTTP client paths: all routes now use `/builder/...` gateway prefix (fixes MCP bridge 404s)
+
+## 0.2.3 (2026-06-06)
+
+- MCP bridge: resolve `mapping_id` via builder `/mappings/{id}` and enrich tool input schemas
+- MCP bridge: emit `outputSchema` from agent `outputs` + endpoint `outputs[]`
+- MCP bridge: expose `ai_guidelines` in server instructions and `viksa://agent/{id}/guidelines` resources
+- MCP bridge: `viksa://mappings` resource catalog; live registry refresh (`--refresh-interval`, default 60s)
+- MCP bridge: disambiguate tool names when multiple agents share alias+endpoint (`viksa.{alias}.{ep}.{id}`)
+- SDK: `client.builder.mappings.get` / `get_many`
+
+## 0.2.2 (2026-06-06)
+
+- `viksa-mcp-bridge` CLI: expose deployed Viksa agent endpoints as MCP tools over stdio
+- Optional `[mcp]` extra (`pip install "viksa-ai[mcp]"`) for Cursor / Claude Desktop integration
+- Tool discovery from builder API; execution via `pulse.execute`
+
 ## 0.2.1 (2026-06-04)
 
 - PyPI release workflow, SDK client expansion, API key auth alignment, docs and CI fixes
