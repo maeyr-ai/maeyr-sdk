@@ -32,9 +32,7 @@ class _AgentsClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if search:
             params["search"] = search
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, "/agent/list", params=params
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, "/agent/list", params=params)
 
     def iter_all(
         self, *, limit: int = 50, search: Optional[str] = None
@@ -130,9 +128,7 @@ class _SecretsClient:
             body["description"] = description
         if passphrase:
             body["passphrase"] = passphrase
-        return await self._builder._client._arequest(
-            "POST", _BUILDER, "/secret/create", json=body
-        )
+        return await self._builder._client._arequest("POST", _BUILDER, "/secret/create", json=body)
 
     async def list_secrets(
         self, *, skip: int = 0, limit: int = 50, search: Optional[str] = None
@@ -140,9 +136,7 @@ class _SecretsClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if search:
             params["search"] = search
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, "/secret/list", params=params
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, "/secret/list", params=params)
 
     async def get_secret(
         self, secret_id: str, *, passphrase: Optional[str] = None
@@ -164,9 +158,7 @@ class _SecretsClient:
         )
 
     async def secret_usage(self, secret_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, f"/secret/{secret_id}/usage"
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, f"/secret/{secret_id}/usage")
 
 
 class _MappingsClient:
@@ -174,9 +166,7 @@ class _MappingsClient:
         self._builder = builder
 
     async def get(self, mapping_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, f"/mappings/{mapping_id}"
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, f"/mappings/{mapping_id}")
 
     async def get_many(self, mapping_ids: List[str]) -> List[Dict[str, Any]]:
         """Fetch up to 100 mappings by id (parallel GET /mappings/{id})."""
@@ -207,9 +197,7 @@ class _McpClient:
         self._builder = builder
 
     async def create(self, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "POST", _BUILDER, "/mcp/servers", json=body
-        )
+        return await self._builder._client._arequest("POST", _BUILDER, "/mcp/servers", json=body)
 
     async def list(
         self, *, status: Optional[str] = None, skip: int = 0, limit: int = 50
@@ -217,14 +205,10 @@ class _McpClient:
         params: Dict[str, Any] = {"skip": skip, "limit": limit}
         if status:
             params["status"] = status
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, "/mcp/servers", params=params
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, "/mcp/servers", params=params)
 
     async def get(self, server_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "GET", _BUILDER, f"/mcp/servers/{server_id}"
-        )
+        return await self._builder._client._arequest("GET", _BUILDER, f"/mcp/servers/{server_id}")
 
     async def update(self, server_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return await self._builder._client._arequest(

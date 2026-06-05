@@ -152,7 +152,9 @@ def _input_schema_for_endpoint(
             if hint:
                 description_parts.append(hint)
         elif mapping_id:
-            description_parts.append(f"Resolve via mapping_id '{mapping_id}' (see viksa://mappings).")
+            description_parts.append(
+                f"Resolve via mapping_id '{mapping_id}' (see viksa://mappings)."
+            )
         if description_parts:
             prop["description"] = " ".join(description_parts)
 
