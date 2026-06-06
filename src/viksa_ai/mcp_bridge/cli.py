@@ -17,6 +17,7 @@ from viksa_ai._constants import (
 from viksa_ai.client import ViksaClient
 from viksa_ai.mcp_bridge.discovery import BridgeTarget
 from viksa_ai.mcp_bridge.registry import BridgeRegistry, refresh_registry
+from viksa_ai.mcp_bridge.execution import ViksaClientExecutionBackend
 from viksa_ai.mcp_bridge.server import create_mcp_server
 
 logger = logging.getLogger(__name__)
@@ -108,8 +109,11 @@ async def _async_main(argv: list[str] | None = None) -> int:
         else:
             logger.info("Loaded %d Viksa tool(s)", len(registry.tools))
         server = create_mcp_server(
-            client,
             registry,
+            execution=ViksaClientExecutionBackend(client),
+            org_id=client.org_id,
+            project_id=client.project_id,
+            client=client,
             target=target,
             refresh_interval_seconds=refresh_interval,
         )

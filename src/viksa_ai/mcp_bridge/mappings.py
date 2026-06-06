@@ -37,6 +37,16 @@ def collect_mapping_ids(agent_docs: List[Dict[str, Any]]) -> List[str]:
     return list(seen.keys())
 
 
+def mappings_from_docs(docs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Index mapping documents keyed by mapping_id."""
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for doc in docs:
+        mid = str(doc.get("mapping_id") or doc.get("_id") or doc.get("id") or "")
+        if mid:
+            by_id[mid] = doc
+    return by_id
+
+
 async def fetch_mappings(client: ViksaClient, mapping_ids: List[str]) -> Dict[str, Dict[str, Any]]:
     """Fetch mapping documents keyed by mapping_id."""
     if not mapping_ids:

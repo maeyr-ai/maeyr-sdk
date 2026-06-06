@@ -9,6 +9,7 @@ from typing import Optional
 
 from viksa_ai.client import ViksaApiError, ViksaClient
 from viksa_ai.mcp_bridge.discovery import BridgeTarget
+from viksa_ai.mcp_bridge.execution import MCPExecutionBackend, ViksaClientExecutionBackend
 from viksa_ai.mcp_bridge.registry import BridgeRegistry, refresh_registry
 from viksa_ai.mcp_bridge.tools import (
     ViksaToolSpec,
@@ -27,13 +28,27 @@ MAPPING_URI_PREFIX = "viksa://mapping/"
 
 
 def create_mcp_server(
-    client: ViksaClient,
     registry: BridgeRegistry,
     *,
-    target: BridgeTarget,
+    execution: MCPExecutionBackend,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+    client: Optional[ViksaClient] = None,
+    target: Optional[BridgeTarget] = None,
     refresh_interval_seconds: int = 60,
 ):
-    """Build an MCP ``Server`` wired to a live Viksa registry."""
+    """
+    Build an MCP ``Server`` wired to a live Viksa registry.
+
+    ``execution`` performs tool calls (inject ``ViksaClientExecutionBackend`` for stdio CLI).
+    When ``client`` and ``target`` are provided, the registry auto-refreshes from builder HTTP.
+    """
+    if client is not None and target is not None:
+        _refresh_client = client
+        _refresh_target = target
+    else:
+        _refresh_client = None
+        _refresh_target = None
     from mcp import types
     from mcp.server import NotificationOptions, Server
     from mcp.server.models import InitializationOptions
@@ -45,12 +60,16 @@ def create_mcp_server(
         nonlocal refresh_task
 
         async def _loop() -> None:
+            if _refresh_client is None or _refresh_target is None:
+                return
             interval = max(refresh_interval_seconds, 15)
             while True:
                 await asyncio.sleep(interval)
-                await refresh_registry(registry, client, target)
+                await refresh_registry(registry, _refresh_client, _refresh_target)
 
-        refresh_task = asyncio.create_task(_loop())
+        refresh_task = None
+        if _refresh_client is not None and _refresh_target is not None:
+            refresh_task = asyncio.create_task(_loop())
         try:
             yield {}
         finally:
@@ -107,9 +126,11 @@ def create_mcp_server(
             raise ValueError(f"Unknown Viksa tool: {name}")
 
         wants_structured = spec.output_schema is not None
-        if not client.org_id or not client.project_id:
+        effective_org = org_id or (client.org_id if client else None)
+        effective_project = project_id or (client.project_id if client else None)
+        if not effective_org or not effective_project:
             return _tool_error(
-                "VIKSA_ORG_ID and VIKSA_PROJECT_ID are required for agent execution",
+                "org_id and project_id are required for agent execution",
                 structured=wants_structured,
             )
 
@@ -117,8 +138,8 @@ def create_mcp_server(
         agent_type = AgentType.SECURE if spec.agent_type == "secure" else AgentType.CLOUD
         task_queue = spec.task_queue or resolve_task_queue(
             agent_type=spec.agent_type,
-            org_id=client.org_id,
-            project_id=client.project_id,
+            org_id=effective_org,
+            project_id=effective_project,
         )
         if not task_queue:
             return _tool_error(
@@ -136,7 +157,7 @@ def create_mcp_server(
         )
 
         try:
-            result = await client.pulse.execute(request)
+            result = await execution.execute(request)
         except ViksaApiError as exc:
             message = exc.detail_message or str(exc)
             return _tool_error(

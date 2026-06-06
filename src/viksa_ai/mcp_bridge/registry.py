@@ -14,6 +14,7 @@ from viksa_ai.mcp_bridge.mappings import (
     collect_mapping_ids,
     fetch_mappings,
     format_mappings_catalog,
+    mappings_from_docs,
 )
 from viksa_ai.mcp_bridge.tools import ViksaToolSpec, agent_doc_to_tools, make_tool_name
 
@@ -106,6 +107,45 @@ class BridgeRegistry:
             )
             registry[mcp_name] = updated
         return registry
+
+
+def build_registry_from_docs(
+    agent_docs: List[Dict],
+    mapping_docs: List[Dict],
+    *,
+    org_id: str,
+    project_id: str,
+) -> BridgeRegistry:
+    """Build a registry from Mongo agent/mapping documents (hosted MCP gateway)."""
+    mappings = mappings_from_docs(mapping_docs)
+    specs: List[ViksaToolSpec] = []
+    agents: Dict[str, AgentMeta] = {}
+
+    for doc in agent_docs:
+        agent_id = str(doc.get("_id") or doc.get("id") or "")
+        agents[agent_id] = AgentMeta(
+            agent_id=agent_id,
+            agent_alias=str(doc.get("agent_alias") or ""),
+            agent_name=str(doc.get("agent_name") or doc.get("agent_alias") or ""),
+            ai_guidelines=doc.get("ai_guidelines"),
+        )
+        specs.extend(
+            agent_doc_to_tools(
+                doc,
+                mappings_by_id=mappings,
+                org_id=org_id,
+                project_id=project_id,
+            )
+        )
+
+    registry = BridgeRegistry()
+    registry.agents = agents
+    registry.mappings = mappings
+    registry.mappings_catalog = format_mappings_catalog(mappings)
+    registry.tools = registry.assign_tool_names(specs)
+    if not registry.tools:
+        registry.load_error = "No enabled endpoints found for token policy"
+    return registry
 
 
 async def build_registry(client: ViksaClient, target: BridgeTarget) -> BridgeRegistry:

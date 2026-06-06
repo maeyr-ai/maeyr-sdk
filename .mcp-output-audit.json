@@ -1,0 +1,2272 @@
+[
+  {
+    "agent": "timezone_agent",
+    "endpoint": "get_secret",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_vpcs",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_vpc",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "delete_vpc",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_subnets",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_subnet",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "delete_subnet",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_internet_gateways",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_internet_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "attach_internet_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "detach_internet_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "delete_internet_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_route_tables",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_route_table",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_route",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "associate_route_table",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "delete_route_table",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_nat_gateways",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_nat_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "delete_nat_gateway",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_network_acls",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_network_acl",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_network_acl_entry",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_vpc_peering_connections",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "create_vpc_peering_connection",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "accept_vpc_peering_connection",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "allocate_address",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "release_address",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_vps_mcp_agent",
+    "endpoint": "list_addresses",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_select",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_insert",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_upsert",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_update",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_delete",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "db_rpc",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_signup",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_signin_password",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_signin_otp",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_verify_otp",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_get_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_logout",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_admin_list_users",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_admin_get_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_admin_create_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_admin_update_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "auth_admin_delete_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_list_buckets",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_get_bucket",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_create_bucket",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_update_bucket",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_delete_bucket",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_copy_object",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_create_signed_url",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_move_object",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_download_object",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "storage_get_public_url",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "supabase_mcp_agent",
+    "endpoint": "functions_invoke",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "list_training_jobs",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "describe_training_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "create_training_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "stop_training_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "list_models",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "describe_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "create_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "delete_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "list_endpoints",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "describe_endpoint",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "create_endpoint_config",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "create_endpoint",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "update_endpoint",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "delete_endpoint",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "delete_endpoint_config",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "list_notebook_instances",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "create_notebook_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "start_notebook_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "stop_notebook_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "delete_notebook_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "list_tags",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "add_tags",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_sagemaker_mcp_agent",
+    "endpoint": "delete_tags",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "create_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "delete_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "start_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "stop_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "reboot_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "modify_db_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "list_db_snapshots",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "create_db_snapshot",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "delete_db_snapshot",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "restore_db_instance_from_snapshot",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "list_db_subnet_groups",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "create_db_subnet_group",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "delete_db_subnet_group",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "list_db_parameter_groups",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "create_db_parameter_group",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "modify_db_parameter_group",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "list_db_engine_versions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "create_read_replica",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "aws_rds_mcp_agent",
+    "endpoint": "get_db_instance_metrics",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "generate_completion",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "generate_chat_completion",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "list_models",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "show_model_info",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "create_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "copy_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "delete_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "pull_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "push_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "generate_embeddings",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "ollama_mcp_agent",
+    "endpoint": "list_running_models",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "list_databases",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "get_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "query_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "create_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "update_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "get_page",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "create_page",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "update_page",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "get_block_children",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "append_block_children",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "update_block",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "delete_block",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "search_notion",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "get_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "list_users",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "notion_mcp_agent",
+    "endpoint": "get_bot_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "kaggle_mcp_agent",
+    "endpoint": "list_kaggle_datasets",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "kaggle_mcp_agent",
+    "endpoint": "list_kaggle_competitions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "kaggle_mcp_agent",
+    "endpoint": "list_kaggle_notebooks",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "kaggle_mcp_agent",
+    "endpoint": "list_kaggle_models",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "kaggle_mcp_agent",
+    "endpoint": "download_kaggle_dataset_file",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "list_hf_models",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "get_model_info",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "download_model",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "download_model_file",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "create_hf_repo",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "delete_hf_repo",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "upload_file_to_repo",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "list_hf_datasets",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "get_dataset_info",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "download_dataset",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "hf_auth",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "list_hf_spaces",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "huggingface_mcp_agent",
+    "endpoint": "get_space_info",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "list_networks",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "get_network",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "insert_network",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "delete_network",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "patch_network",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "list_subnetworks",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "get_subnetwork",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "insert_subnetwork",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "delete_subnetwork",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "expand_subnetwork_ip_cidr_range",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "list_firewalls",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "get_firewall",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "insert_firewall",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "patch_firewall",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "delete_firewall",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "list_routes",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "get_route",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "insert_route",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_vpc_mcp_agent",
+    "endpoint": "delete_route",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "list_service_accounts",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "get_service_account",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "create_service_account",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "delete_service_account",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "update_service_account",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "create_service_account_key",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "list_service_account_keys",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "delete_service_account_key",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "get_iam_policy",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "set_iam_policy",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "add_iam_policy_binding",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "remove_iam_policy_binding",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_iam_mcp_agent",
+    "endpoint": "test_iam_permissions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "list_clusters",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "get_cluster",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "create_cluster",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "delete_cluster",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "update_cluster",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "list_node_pools",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "create_node_pool",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "delete_node_pool",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "set_node_pool_autoscaling",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "set_node_pool_management",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "set_node_pool_size",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "get_server_config",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_gke_mcp_agent",
+    "endpoint": "get_operation",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "list_jobs",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "get_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "update_job_state",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "get_job_metrics",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "get_job_execution_details",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "get_stage_execution_details",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "list_job_messages",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "launch_template",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "launch_flex_template",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "list_snapshots",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "get_snapshot",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "delete_snapshot",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_dataflow_mcp_agent",
+    "endpoint": "snapshot_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "list_instances",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "get_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "create_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "delete_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "update_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "start_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "stop_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "restart_instance",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "list_databases",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "create_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "delete_database",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "list_users",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "create_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "delete_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "update_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "list_backup_runs",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "create_backup",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "delete_backup",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloudsql_mcp_agent",
+    "endpoint": "get_operation",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "list_cloudrun_services",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "get_cloudrun_service",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "create_cloudrun_service",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "update_cloudrun_service",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "delete_cloudrun_service",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "list_cloudrun_revisions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "get_cloudrun_revision",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "delete_cloudrun_revision",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "list_cloudrun_jobs",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "get_cloudrun_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "create_cloudrun_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "update_cloudrun_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "delete_cloudrun_job",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "list_cloudrun_executions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "get_cloudrun_execution",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "gcp_cloud_run_mcp_agent",
+    "endpoint": "delete_cloudrun_execution",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_file",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_file_nodes",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_images",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_image_fills",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_comments",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "post_figma_comment",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "delete_figma_comment",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_user",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_file_versions",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_team_projects",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_project_files",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_component",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_component_set",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_figma_style",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_team_components",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "figma_mcp_agent",
+    "endpoint": "get_team_styles",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "executormcpagent",
+    "endpoint": "execute_shell",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "executormcpagent",
+    "endpoint": "execute_python",
+    "level": "low",
+    "code": "no_outputs_declared",
+    "message": "Enabled endpoint declares no outputs[]",
+    "detail": {}
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "get_user",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'user' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "get_repository",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'repository' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "create_repository",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'repository' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "delete_repository",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "get_file_contents",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'file' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "create_or_update_file",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'file' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "delete_file",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'commit' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "create_issue",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'issue' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "update_issue",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'issue' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "create_pull_request",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'pull_request' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "search_repositories",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'results' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "search_code",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'results' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "get_repository_stats",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'stats' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "push_code",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "github_mcp_agent",
+    "endpoint": "push_code",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'commit' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": ""
+    }
+  },
+  {
+    "agent": "mysql_mcp_agent",
+    "endpoint": "get_full_schema",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'schema' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": "Full database schema"
+    }
+  },
+  {
+    "agent": "mysql_mcp_agent",
+    "endpoint": "create_database",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "mysql_mcp_agent",
+    "endpoint": "create_table",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "mysql_mcp_agent",
+    "endpoint": "drop_database",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "mysql_mcp_agent",
+    "endpoint": "drop_table",
+    "level": "medium",
+    "code": "likely_optional_marked_required",
+    "message": "Output 'message' looks optional but is required (string)",
+    "detail": {
+      "nullable": false
+    }
+  },
+  {
+    "agent": "websitesecurityscanner",
+    "endpoint": "ssl_check",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'issuer' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": "Issuer information from the certificate"
+    }
+  },
+  {
+    "agent": "elastichealthmonitor",
+    "endpoint": "get_health",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'health' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": "Returns the cluster health status ('green' or 'yellow')."
+    }
+  },
+  {
+    "agent": "elastichealthmonitor",
+    "endpoint": "get_disk",
+    "level": "low",
+    "code": "dict_output_type",
+    "message": "Output 'disk_usage_percent' declared as dict \u2014 OK on 0.2.7+, risky on older bridge",
+    "detail": {
+      "description": "Returns the disk usage percentage of the cluster."
+    }
+  }
+]
