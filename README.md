@@ -12,7 +12,7 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 | [`viksa_ai.runtime`](#agent-runtime) | Same API as injected `ViksaAI.py` (`mcp_endpoint`, `ViksaAuth`, A2A `context()`) |
 | [`viksa_ai.client`](#platform-http-client) | Typed async HTTP client for `https://api.viksaai.com` |
 | [`viksa_ai.devtools`](#development-tooling) | AST + schema validation for generated agents |
-| [`viksa_ai.mcp_bridge`](#mcp-bridge-cursor--claude) | Expose deployed Viksa agents as MCP tools (stdio) |
+| [`viksa_ai.mcp_bridge`](#mcp-bridge-cursor--claude) | Stdio MCP proxy to the hosted Viksa MCP gateway |
 | [`viksa_ai.models`](#data-models) | Pydantic models for API requests and A2A envelopes |
 
 ---
@@ -546,62 +546,49 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 
 ## MCP bridge (Cursor / Claude)
 
-Expose **deployed** Viksa agent endpoints as native MCP tools in Cursor, Claude Desktop, or any stdio MCP client.
+**Recommended:** connect Cursor directly to the hosted MCP gateway (no SDK process):
+
+```json
+{
+  "mcpServers": {
+    "viksa": {
+      "url": "https://api.viksaai.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:VIKSA_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+```bash
+export VIKSA_MCP_TOKEN="mcp_..."
+```
+
+Create tokens in the Viksa console → **MCP Tokens**. Token policy controls which agents and scopes are available.
+
+### Stdio proxy (`viksa-mcp-bridge`)
+
+For clients that only support **stdio** MCP (older Claude Desktop setups), the SDK provides a thin proxy to **mcp-gateway-service** — registry, mappings, schemas, and execution all live on the gateway (Mongo + pulse), not in the SDK.
 
 ```bash
 pip install "viksa-ai[mcp]"
-```
+export VIKSA_MCP_TOKEN="mcp_..."
 
-### Run the bridge
+# All agents allowed by the token
+viksa-mcp-bridge
 
-Single agent by id:
-
-```bash
-export VIKSA_API_KEY="vk_..."
-export VIKSA_ORG_ID="..."
-export VIKSA_PROJECT_ID="..."
-
-viksa-mcp-bridge --agent-id YOUR_AGENT_ID
-```
-
-Or by alias / all deployed agents in the project:
-
-```bash
+# Single agent scope
 viksa-mcp-bridge --agent-alias github_mcp_agent
-viksa-mcp-bridge --all-deployed
 ```
-
-Each enabled endpoint becomes a tool named `{agent_alias}_{endpoint_name}` with
-no extra prefix. Use a short MCP server name in `mcp.json` (e.g. `vall`) so
-server+tool length stays within Cursor's 60-character limit.
-Tool calls are proxied to `POST /pulse/executor/execute`.
-
-The bridge resolves the full agent manifest from builder-service:
-
-| Manifest field | MCP surface |
-|----------------|-------------|
-| `agent_endpoints[]` | One MCP tool per enabled endpoint |
-| `inputs[]` + endpoint `inputs[].input_ref` | Tool `inputSchema` (types, defaults, validation) |
-| `inputs[].mapping_id` | Fetched from `/mappings/{id}`; hints in schema + `viksa://mappings` resource |
-| `outputs[]` + endpoint `outputs[]` | Tool `outputSchema` (types + `nullable`; `dict` accepts any JSON value; optional outputs omitted from `required`) |
-| `ai_guidelines` | Server `instructions` + `viksa://agent/{id}/guidelines` resource |
-
-Registry refreshes from the platform every 60 seconds by default (`--refresh-interval 0` to disable).
-
-### Cursor configuration
-
-Add to `.cursor/mcp.json` (or Cursor MCP settings):
 
 ```json
 {
   "mcpServers": {
     "viksa": {
       "command": "viksa-mcp-bridge",
-      "args": ["--agent-id", "YOUR_AGENT_ID"],
       "env": {
-        "VIKSA_API_KEY": "vk_...",
-        "VIKSA_ORG_ID": "...",
-        "VIKSA_PROJECT_ID": "...",
+        "VIKSA_MCP_TOKEN": "mcp_...",
         "VIKSA_BASE_URL": "https://api.viksaai.com"
       }
     }
@@ -609,20 +596,16 @@ Add to `.cursor/mcp.json` (or Cursor MCP settings):
 }
 ```
 
-### Claude Desktop configuration
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) using the same `mcpServers` block as above.
+Scoped URL: `https://api.viksaai.com/mcp/agents/{agent_alias}` (set via `--agent-alias` or `VIKSA_AGENT_ALIAS`).
 
 ### Environment variables
 
 | Variable | Description |
 |----------|-------------|
-| `VIKSA_API_KEY` | Project API key (recommended) |
-| `VIKSA_ORG_ID` / `VIKSA_PROJECT_ID` | Tenant scope |
-| `VIKSA_AGENT_ID` | Default agent when `--agent-id` is omitted |
-| `VIKSA_AGENT_ALIAS` | Default agent when `--agent-alias` is omitted |
-| `VIKSA_MCP_ALL_DEPLOYED` | Set to `1` / `true` to expose all deployed agents |
-| `VIKSA_MCP_REFRESH_INTERVAL` | Registry refresh seconds (default `60`; `0` disables) |
+| `VIKSA_MCP_TOKEN` | **Required.** MCP token from the console |
+| `VIKSA_BASE_URL` | API gateway base (default `https://api.viksaai.com`) |
+| `VIKSA_MCP_GATEWAY_URL` | Full MCP URL override (optional) |
+| `VIKSA_AGENT_ALIAS` | Default `--agent-alias` for scoped `/mcp/agents/{alias}` |
 
 ---
 

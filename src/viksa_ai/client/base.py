@@ -35,7 +35,7 @@ from viksa_ai.client.transport import HttpTransport
 from viksa_ai.client.webhook import WebhookClient
 from viksa_ai.client.workflow import WorkflowClient
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 
 AuthKind = Literal["access_token", "api_key"]
 

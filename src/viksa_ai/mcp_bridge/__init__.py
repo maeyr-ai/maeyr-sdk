@@ -1,13 +1,13 @@
-"""Expose Viksa agents as MCP tools for Cursor, Claude Desktop, and other MCP clients."""
+"""MCP bridge: stdio proxy client to the hosted Viksa MCP gateway."""
 
-from viksa_ai.mcp_bridge.registry import BridgeRegistry, build_registry, load_tool_registry
-from viksa_ai.mcp_bridge.tools import ViksaToolSpec, agent_doc_to_tools, make_tool_name
+from viksa_ai.mcp_bridge.gateway import (
+    resolve_gateway_url,
+    resolve_mcp_token,
+    run_stdio_gateway_proxy,
+)
 
 __all__ = [
-    "BridgeRegistry",
-    "ViksaToolSpec",
-    "agent_doc_to_tools",
-    "build_registry",
-    "load_tool_registry",
-    "make_tool_name",
+    "resolve_gateway_url",
+    "resolve_mcp_token",
+    "run_stdio_gateway_proxy",
 ]

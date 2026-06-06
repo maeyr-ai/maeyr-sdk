@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8 (2026-06-06)
+
+- **Breaking:** `viksa-mcp-bridge` is now a stdio proxy to **mcp-gateway-service** (Streamable HTTP); requires `VIKSA_MCP_TOKEN`, not `VIKSA_API_KEY` + builder discovery
+- Removed duplicated `mcp_bridge` registry/tool/mapping logic from the SDK (canonical implementation lives in mcp-gateway-service)
+- Prefer Cursor `url` + `VIKSA_MCP_TOKEN` over stdio when possible
+
 ## 0.2.7 (2026-06-06)
 
 - MCP bridge: honor `outputs[].nullable` in tool `outputSchema` (JSON Schema `["type", "null"]`, omit from `required`)
