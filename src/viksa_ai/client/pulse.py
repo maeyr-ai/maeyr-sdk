@@ -14,6 +14,14 @@ if TYPE_CHECKING:
 
 
 class PulseClient:
+    """
+    Direct pulse executor API (``/pulse/executor/*``).
+
+    For MCP agent tool calls from Python, prefer :class:`~viksa_ai.client.mcp.McpClient`
+    so execution enters through mcp-gateway-service and traces stay
+    ``mcp.tools.call`` → ``pulse.invoke``.
+    """
+
     def __init__(self, client: ViksaClient) -> None:
         self._client = client
 
