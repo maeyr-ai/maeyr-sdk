@@ -1,10 +1,5 @@
 # Changelog
 
-## 0.2.9 (2026-06-07)
-
-- **`McpClient`**: call Viksa agent tools via **mcp-gateway-service** (`call_tool`, `list_tools`); sends `X-MCP-Client: viksa-sdk` for trace attribution
-- Agent tool execution from Python should use `McpClient`, not `ViksaClient.pulse.execute` (pulse bypasses MCP gateway and breaks trace hierarchy)
-
 ## 0.2.8 (2026-06-06)
 
 - **Breaking:** `viksa-mcp-bridge` is now a stdio proxy to **mcp-gateway-service** (Streamable HTTP); requires `VIKSA_MCP_TOKEN`, not `VIKSA_API_KEY` + builder discovery

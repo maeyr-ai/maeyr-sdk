@@ -2,12 +2,11 @@
 
 from typing import TYPE_CHECKING
 
-__version__ = "0.2.9"
+__version__ = "0.2.6"
 
 __all__ = [
     "ViksaApiError",
     "ViksaAuthenticationError",
-    "McpClient",
     "ViksaClient",
     "ViksaNotFoundError",
     "ViksaRateLimitError",
@@ -19,10 +18,6 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    if name == "McpClient":
-        from viksa_ai.client import McpClient
-
-        return McpClient
     if name == "ViksaClient":
         from viksa_ai.client import ViksaClient
 
@@ -48,7 +43,6 @@ def __getattr__(name: str):
 
 if TYPE_CHECKING:
     from viksa_ai.client import (
-        McpClient,
         ViksaApiError,
         ViksaAuthenticationError,
         ViksaClient,
