@@ -1,4 +1,4 @@
-"""CLI: run Viksa agents as an MCP server over stdio."""
+"""CLI: stdio MCP proxy to the hosted Viksa MCP gateway."""
 
 from __future__ import annotations
 
@@ -10,14 +10,15 @@ import sys
 
 from viksa_ai._constants import (
     ENV_AGENT_ALIAS,
-    ENV_AGENT_ID,
-    ENV_MCP_ALL_DEPLOYED,
-    ENV_MCP_REFRESH_INTERVAL,
+    ENV_BASE_URL,
+    ENV_MCP_GATEWAY_URL,
+    ENV_MCP_TOKEN,
 )
-from viksa_ai.client import ViksaClient
-from viksa_ai.mcp_bridge.discovery import BridgeTarget
-from viksa_ai.mcp_bridge.registry import BridgeRegistry, refresh_registry
-from viksa_ai.mcp_bridge.server import create_mcp_server
+from viksa_ai.mcp_bridge.gateway import (
+    resolve_gateway_url,
+    resolve_mcp_token,
+    run_stdio_gateway_proxy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,34 +26,32 @@ logger = logging.getLogger(__name__)
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Expose Viksa agent endpoints as an MCP server (stdio) for Cursor or Claude Desktop"
+            "Stdio MCP proxy to the Viksa hosted MCP gateway (mcp-gateway-service). "
+            "Prefer configuring Cursor with the gateway URL directly when possible."
         ),
-    )
-    target = parser.add_mutually_exclusive_group(required=False)
-    target.add_argument(
-        "--agent-id",
-        default=os.environ.get(ENV_AGENT_ID),
-        help=f"Expose one agent by id (env: {ENV_AGENT_ID})",
-    )
-    target.add_argument(
-        "--agent-alias",
-        default=os.environ.get(ENV_AGENT_ALIAS),
-        help=f"Expose one agent by alias (env: {ENV_AGENT_ALIAS})",
-    )
-    target.add_argument(
-        "--all-deployed",
-        action="store_true",
-        default=os.environ.get(ENV_MCP_ALL_DEPLOYED, "").lower() in ("1", "true", "yes"),
-        help=f"Expose all deployed agents in the project (env: {ENV_MCP_ALL_DEPLOYED})",
     )
     parser.add_argument(
-        "--refresh-interval",
-        type=int,
-        default=int(os.environ.get(ENV_MCP_REFRESH_INTERVAL, "60")),
+        "--mcp-token",
+        default=os.environ.get(ENV_MCP_TOKEN),
+        help=f"MCP token (env: {ENV_MCP_TOKEN})",
+    )
+    parser.add_argument(
+        "--agent-alias",
+        default=os.environ.get(ENV_AGENT_ALIAS),
         help=(
-            "Seconds between registry refreshes from builder-service "
-            f"(0=disabled, env: {ENV_MCP_REFRESH_INTERVAL}, default: 60)"
+            f"Scope to one agent via /mcp/agents/{{alias}} (env: {ENV_AGENT_ALIAS}). "
+            "Omit to use /mcp (all agents allowed by the token policy)."
         ),
+    )
+    parser.add_argument(
+        "--gateway-url",
+        default=os.environ.get(ENV_MCP_GATEWAY_URL),
+        help=f"Full gateway MCP URL override (env: {ENV_MCP_GATEWAY_URL})",
+    )
+    parser.add_argument(
+        "--base-url",
+        default=os.environ.get(ENV_BASE_URL),
+        help=f"Platform API base URL (env: {ENV_BASE_URL}, default: https://api.viksaai.com)",
     )
     parser.add_argument(
         "--log-level",
@@ -61,19 +60,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Log level for bridge diagnostics (default: WARNING)",
     )
     return parser
-
-
-def _resolve_target(args: argparse.Namespace) -> BridgeTarget:
-    if args.agent_id:
-        return BridgeTarget(agent_id=args.agent_id)
-    if args.agent_alias:
-        return BridgeTarget(agent_alias=args.agent_alias)
-    if args.all_deployed:
-        return BridgeTarget(all_deployed=True)
-    raise SystemExit(
-        "error: specify --agent-id, --agent-alias, or --all-deployed "
-        "(or set VIKSA_AGENT_ID / VIKSA_AGENT_ALIAS / VIKSA_MCP_ALL_DEPLOYED)"
-    )
 
 
 async def _async_main(argv: list[str] | None = None) -> int:
@@ -93,28 +79,19 @@ async def _async_main(argv: list[str] | None = None) -> int:
         stream=sys.stderr,
     )
 
-    target = _resolve_target(args)
-    refresh_interval = max(0, int(args.refresh_interval))
-    client = ViksaClient.from_env()
-
-    registry = BridgeRegistry()
-    async with client:
-        await refresh_registry(registry, client, target)
-        if registry.load_error:
-            logger.error(
-                "Initial Viksa load failed (MCP server will still start): %s",
-                registry.load_error,
-            )
-        else:
-            logger.info("Loaded %d Viksa tool(s)", len(registry.tools))
-        server = create_mcp_server(
-            client,
-            registry,
-            target=target,
-            refresh_interval_seconds=refresh_interval,
+    try:
+        token = resolve_mcp_token(args.mcp_token)
+        url = resolve_gateway_url(
+            base_url=args.base_url,
+            agent_alias=args.agent_alias,
+            gateway_url=args.gateway_url,
         )
-        await server.run_stdio()  # type: ignore[attr-defined]
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
+    logger.info("Proxying stdio MCP → %s", url)
+    await run_stdio_gateway_proxy(gateway_url=url, mcp_token=token)
     return 0
 
 
@@ -123,9 +100,6 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(_async_main(argv))
     except KeyboardInterrupt:
         return 130
-    except ValueError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
     except Exception as exc:
         logger.exception("viksa-mcp-bridge failed: %s", exc)
         print(f"error: {exc}", file=sys.stderr)
