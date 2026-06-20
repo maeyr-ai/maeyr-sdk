@@ -546,7 +546,9 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 
 ## MCP bridge (Cursor / Claude)
 
-**Recommended:** connect Cursor directly to the hosted MCP gateway (no SDK process):
+**Recommended:** connect Cursor directly to the hosted MCP gateway (no SDK process).
+
+**Header auth** (when your client supports custom headers):
 
 ```json
 {
@@ -561,11 +563,23 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 }
 ```
 
+**URL token** (when the client only accepts a connection URL — same `mcp_` key):
+
+```json
+{
+  "mcpServers": {
+    "viksa": {
+      "url": "https://api.viksaai.com/mcp?token=${env:VIKSA_MCP_TOKEN}"
+    }
+  }
+}
+```
+
 ```bash
 export VIKSA_MCP_TOKEN="mcp_..."
 ```
 
-Create tokens in the Viksa console → **MCP Tokens**. Token policy controls which agents and scopes are available.
+Create tokens in the Viksa console → **MCP Tokens**. Token policy controls which agents and scopes are available. Prefer the header when possible — URL tokens may appear in access logs.
 
 ### Stdio proxy (`viksa-mcp-bridge`)
 
