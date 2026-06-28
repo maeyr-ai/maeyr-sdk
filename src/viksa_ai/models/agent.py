@@ -123,6 +123,18 @@ class AgentEndpoint(BaseModel):
     inputs: List[EndpointInputRef] = Field(default_factory=list)
     outputs: List[str] = Field(default_factory=list)
     execution_config: Optional[ExecutionConfig] = None
+    annotations: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional MCP-style hints about endpoint behavior (readOnly, destructive, idempotent)"
+    )
+    approval_policy: str = Field(
+        default="none",
+        description="Approval policy for this endpoint: none, required, or on_destructive"
+    )
+    approver_roles: List[str] = Field(
+        default_factory=list,
+        description="List of roles allowed to approve this endpoint"
+    )
 
 
 class AgentQueue(BaseModel):
