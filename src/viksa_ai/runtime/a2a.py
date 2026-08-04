@@ -1,9 +1,9 @@
-from typing import Dict, Optional, TypedDict
+from typing import Any, Dict, Optional, TypedDict
 
 A2A_PAYLOAD_KEY = "__viksa_a2a__"
 
 _A2A_PAYLOAD_KEY = A2A_PAYLOAD_KEY
-_A2A_ENVELOPE: Dict = {}
+_A2A_ENVELOPE: Dict[str, Any] = {}
 
 
 class A2AContext(TypedDict, total=False):
@@ -17,23 +17,26 @@ class A2AContext(TypedDict, total=False):
     endpoint: str
     idempotency_key: str
     deadline_at: str
-    metadata: Dict
+    metadata: Dict[str, Any]
 
 
-def attach_envelope(inputs: Dict, envelope: Dict) -> Dict:
+def attach_envelope(
+    inputs: Dict[str, Any],
+    envelope: Dict[str, Any],
+) -> Dict[str, Any]:
     """Attach an A2A envelope to workflow inputs under the reserved key."""
     out = dict(inputs)
     out[A2A_PAYLOAD_KEY] = envelope
     return out
 
 
-def _set_envelope(envelope: Optional[Dict]) -> None:
+def _set_envelope(envelope: Optional[Dict[str, Any]]) -> None:
     """Internal: importer-side hook to install the per-call envelope."""
     global _A2A_ENVELOPE
     _A2A_ENVELOPE = dict(envelope or {})
 
 
-def _strip_envelope(inputs: Dict) -> Dict:
+def _strip_envelope(inputs: Dict[str, Any]) -> Dict[str, Any]:
     """Internal: importer-side hook to pop the envelope key from inputs."""
     if not isinstance(inputs, dict):
         return inputs
@@ -43,7 +46,7 @@ def _strip_envelope(inputs: Dict) -> Dict:
     return inputs
 
 
-def context() -> Dict:
+def context() -> Dict[str, Any]:
     """Returns the A2A envelope for the current call (or {} if absent).
 
     Example:

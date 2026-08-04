@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional, cast
 
 import httpx
 
@@ -50,7 +50,7 @@ class WebhookClient:
             raise wrap_transport_error(exc, method="POST", url=url) from exc
         if response.status_code >= 400:
             raise_for_response(response, service="chat", method="POST", path=path)
-        return response.json()
+        return cast(Dict[str, Any], response.json())
 
     async def stream(self, payload: Dict[str, Any]) -> AsyncIterator[Dict[str, Any]]:
         url = f"{self.base_url}{self._prefix}/webhook/trigger/{self.trigger_id}/stream"
@@ -86,4 +86,4 @@ class WebhookClient:
             raise wrap_transport_error(exc, method="GET", url=url) from exc
         if response.status_code >= 400:
             raise_for_response(response, service="chat", method="GET", path=path)
-        return response.json()
+        return cast(Dict[str, Any], response.json())

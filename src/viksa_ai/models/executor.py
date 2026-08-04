@@ -31,7 +31,7 @@ class EndpointExecutionRequest(BaseModel):
     envelope: Optional[A2AEnvelopeIn] = None
 
     @model_validator(mode="after")
-    def validate_secure_agent_queue(self):
+    def validate_secure_agent_queue(self) -> "EndpointExecutionRequest":
         if self.agent_type == AgentType.SECURE and not self.task_queue:
             raise ValueError("task_queue is mandatory for secure agents")
         return self

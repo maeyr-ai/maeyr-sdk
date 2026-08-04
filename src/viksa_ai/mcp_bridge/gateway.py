@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from collections.abc import Awaitable, Callable
+from typing import Any, Optional, cast
 from urllib.parse import quote
 
 import httpx
 from pydantic import AnyUrl
 
-from viksa_ai._constants import DEFAULT_BASE_URL, ENV_BASE_URL, ENV_MCP_GATEWAY_URL, ENV_MCP_TOKEN
+from viksa_ai._constants import DEFAULT_BASE_URL, ENV_MCP_TOKEN
 from viksa_ai.client.base import __version__
 
 logger = logging.getLogger(__name__)
@@ -89,24 +90,73 @@ async def run_stdio_gateway_proxy(
                     instructions=init_result.instructions,
                 )
 
-                @server.list_tools()
+                list_tools_decorator = cast(
+                    Callable[
+                        [],
+                        Callable[
+                            [Callable[[], Awaitable[list[types.Tool]]]],
+                            Callable[[], Awaitable[list[types.Tool]]],
+                        ],
+                    ],
+                    server.list_tools,
+                )
+                call_tool_decorator = cast(
+                    Callable[
+                        [],
+                        Callable[
+                            [
+                                Callable[
+                                    [str, dict[str, Any] | None],
+                                    Awaitable[types.CallToolResult],
+                                ]
+                            ],
+                            Callable[
+                                [str, dict[str, Any] | None],
+                                Awaitable[types.CallToolResult],
+                            ],
+                        ],
+                    ],
+                    server.call_tool,
+                )
+                list_resources_decorator = cast(
+                    Callable[
+                        [],
+                        Callable[
+                            [Callable[[], Awaitable[list[types.Resource]]]],
+                            Callable[[], Awaitable[list[types.Resource]]],
+                        ],
+                    ],
+                    server.list_resources,
+                )
+                read_resource_decorator = cast(
+                    Callable[
+                        [],
+                        Callable[
+                            [Callable[[AnyUrl | str], Awaitable[str]]],
+                            Callable[[AnyUrl | str], Awaitable[str]],
+                        ],
+                    ],
+                    server.read_resource,
+                )
+
+                @list_tools_decorator()
                 async def handle_list_tools() -> list[types.Tool]:
                     result = await upstream.list_tools()
                     return result.tools
 
-                @server.call_tool()
+                @call_tool_decorator()
                 async def handle_call_tool(
                     name: str,
-                    arguments: dict | None,
+                    arguments: dict[str, Any] | None,
                 ) -> types.CallToolResult:
                     return await upstream.call_tool(name, arguments)
 
-                @server.list_resources()
+                @list_resources_decorator()
                 async def handle_list_resources() -> list[types.Resource]:
                     result = await upstream.list_resources()
                     return result.resources
 
-                @server.read_resource()
+                @read_resource_decorator()
                 async def handle_read_resource(uri: AnyUrl | str) -> str:
                     result = await upstream.read_resource(AnyUrl(str(uri)))
                     if not result.contents:

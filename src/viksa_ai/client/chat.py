@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Optional
 
 from viksa_ai._constants import SERVICE_PATHS
@@ -37,7 +38,7 @@ class _TriggersClient:
             "POST",
             SERVICE_PATHS["chat"],
             f"/trigger/{trigger_id}/test",
-            json=body or {},
+            json_body=body or {},
         )
 
     async def list_executions(self, trigger_id: str, **params: Any) -> Dict[str, Any]:
@@ -78,8 +79,15 @@ class ChatClient:
         conversation_id: Optional[str] = None,
         workforce_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        schedule_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        body: Dict[str, Any] = {"message": message}
+        body: Dict[str, Any] = {
+            "message": message,
+            # A chat turn may decide to create a schedule. Allocate its identity
+            # before the retrying transport so an ambiguous POST cannot create
+            # a second schedule. Persist/pass this value for a manual retry.
+            "schedule_id": schedule_id or f"SC-{uuid.uuid4().hex.upper()}",
+        }
         if conversation_id:
             body["conversation_id"] = conversation_id
         if workforce_id:
@@ -94,14 +102,21 @@ class ChatClient:
         *,
         conversation_id: Optional[str] = None,
         workforce_id: Optional[str] = None,
+        schedule_id: Optional[str] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
-        body: Dict[str, Any] = {"message": message}
+        body: Dict[str, Any] = {
+            "message": message,
+            "schedule_id": schedule_id or f"SC-{uuid.uuid4().hex.upper()}",
+        }
         if conversation_id:
             body["conversation_id"] = conversation_id
         if workforce_id:
             body["workforce_id"] = workforce_id
         async for event in self._client._astream(
-            "POST", SERVICE_PATHS["chat"], "/indent_finder/stream", json=body
+            "POST",
+            SERVICE_PATHS["chat"],
+            "/indent_finder/stream",
+            json_body=body,
         ):
             yield event
 

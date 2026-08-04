@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+import uuid
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -125,15 +126,18 @@ class AgentEndpoint(BaseModel):
     execution_config: Optional[ExecutionConfig] = None
     annotations: Optional[Dict[str, Any]] = Field(
         None,
-        description="Optional MCP-style hints about endpoint behavior (readOnly, destructive, idempotent)"
+        description=(
+            "Optional MCP-style hints about endpoint behavior "
+            "(readOnly, destructive, idempotent)"
+        ),
     )
     approval_policy: str = Field(
         default="none",
-        description="Approval policy for this endpoint: none, required, or on_destructive"
+        description="Approval policy for this endpoint: none, required, or on_destructive",
     )
     approver_roles: List[str] = Field(
         default_factory=list,
-        description="List of roles allowed to approve this endpoint"
+        description="List of roles allowed to approve this endpoint",
     )
 
 
@@ -176,6 +180,17 @@ class AgentGenerationResponse(BaseAgentData):
 class AgentCreationRequest(BaseModel):
     """Subset of builder ``AgentCreationRequest`` for SDK clients."""
 
+    idempotency_key: str = Field(
+        default_factory=lambda: uuid.uuid4().hex,
+        exclude=True,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/+@-]*$",
+        description=(
+            "Stable local creation identity. Reuse this request object, or pass "
+            "the same value explicitly, when retrying an ambiguous create."
+        ),
+    )
     agent_name: str
     agent_alias: str
     agent_description: str
@@ -196,3 +211,32 @@ class AgentUpdateRequest(BaseModel):
     inputs: Optional[List[AgentInput]] = None
     outputs: Optional[List[AgentOutput]] = None
     agent_endpoints: Optional[List[AgentEndpoint]] = None
+
+
+class AgentDeletionStatus(str, Enum):
+    DELETED = "deleted"
+    APPROVAL_PENDING = "approval_pending"
+    QUOTA_RELEASE_PENDING = "quota_release_pending"
+
+
+class AgentDeletionResult(BaseModel):
+    """Typed Builder deletion saga result; HTTP 202 is not terminal success."""
+
+    agent_id: str
+    status: AgentDeletionStatus
+    deleted: bool
+    quota_released: bool = False
+    pending_change_id: Optional[str] = None
+    message: str
+
+    @model_validator(mode="after")
+    def validate_terminal_state(self) -> "AgentDeletionResult":
+        if self.status == AgentDeletionStatus.DELETED and not self.deleted:
+            raise ValueError("status=deleted requires deleted=true")
+        if self.status == AgentDeletionStatus.APPROVAL_PENDING and self.deleted:
+            raise ValueError("approval_pending cannot report a deleted agent")
+        return self
+
+    @property
+    def complete(self) -> bool:
+        return self.status == AgentDeletionStatus.DELETED and self.deleted

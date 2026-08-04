@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from viksa_ai.models.a2a import A2A_PROTOCOL_VERSION, A2AEnvelope
 from viksa_ai.models.agent import AgentEndpoint, AgentInput
@@ -13,7 +13,7 @@ def _index_inputs(inputs: List[AgentInput]) -> dict[str, AgentInput]:
     return {inp.name: inp for inp in inputs}
 
 
-def _validate_value(name: str, value, schema: AgentInput) -> List[str]:
+def _validate_value(name: str, value: Any, schema: AgentInput) -> List[str]:
     issues: List[str] = []
     if value is None:
         return issues
@@ -43,9 +43,9 @@ def _validate_value(name: str, value, schema: AgentInput) -> List[str]:
 
 
 def validate_a2a_envelope(
-    envelope: Union[A2AEnvelope, dict],
-    endpoint: Union[AgentEndpoint, dict],
-    agent_inputs: List[Union[AgentInput, dict]],
+    envelope: Union[A2AEnvelope, dict[str, Any]],
+    endpoint: Union[AgentEndpoint, dict[str, Any]],
+    agent_inputs: List[Union[AgentInput, dict[str, Any]]],
     *,
     now: Optional[datetime] = None,
 ) -> List[str]:

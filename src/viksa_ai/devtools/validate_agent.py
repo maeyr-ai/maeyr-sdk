@@ -65,18 +65,12 @@ def _function_arg_names(func_node: ast.AsyncFunctionDef) -> Set[str]:
 def _const_str(node: ast.AST) -> Optional[str]:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
-    if isinstance(node, ast.Str):
-        return node.s
     return None
 
 
-def _slice_to_str(s: Any) -> Optional[str]:
+def _slice_to_str(s: ast.AST) -> Optional[str]:
     if isinstance(s, ast.Constant) and isinstance(s.value, str):
         return s.value
-    if isinstance(s, ast.Str):
-        return s.s
-    if isinstance(s, ast.Index) and s.value is not None:
-        return _const_str(s.value)
     return None
 
 

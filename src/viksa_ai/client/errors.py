@@ -136,7 +136,7 @@ def _extract_request_id(headers: httpx.Headers) -> Optional[str]:
     ):
         value = headers.get(key)
         if value:
-            return value
+            return str(value)
     return None
 
 

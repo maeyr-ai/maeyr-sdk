@@ -1,7 +1,14 @@
 """Pydantic models for platform API and agent manifests."""
 
-from viksa_ai.models.a2a import A2A_PROTOCOL_VERSION, A2AEnvelope, A2AResponse, A2AStatus
+from viksa_ai.models.a2a import (
+    A2A_PROTOCOL_VERSION,
+    A2AEnvelope,
+    A2AResponse,
+    A2AStatus,
+)
 from viksa_ai.models.agent import (
+    AgentDeletionResult,
+    AgentDeletionStatus,
     AgentEndpoint,
     AgentFile,
     AgentFileType,
@@ -31,6 +38,8 @@ __all__ = [
     "A2AResponse",
     "A2AStatus",
     "AgentEndpoint",
+    "AgentDeletionResult",
+    "AgentDeletionStatus",
     "AgentFile",
     "AgentFileType",
     "AgentGenerationResponse",

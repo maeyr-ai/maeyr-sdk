@@ -21,7 +21,7 @@ def _compute_backoff(attempt: int, config: RetryConfig, retry_after: Optional[fl
     if retry_after is not None and retry_after > 0:
         return min(retry_after, config.max_backoff_seconds)
     delay = config.backoff_factor * (2**attempt)
-    return min(delay, config.max_backoff_seconds)
+    return float(min(delay, config.max_backoff_seconds))
 
 
 def _should_retry_status(status: int, config: RetryConfig) -> bool:

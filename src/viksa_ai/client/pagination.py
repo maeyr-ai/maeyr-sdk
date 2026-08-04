@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Dict, List, Optional, Protocol
+from typing import Any, AsyncIterator, Dict, List, Optional, Protocol, cast
 
 
 class _ListPage(Protocol):
@@ -70,7 +70,7 @@ def extract_items(
 ) -> List[Any]:
     """Extract list payload from a paginated response dict."""
     if items_key in page and isinstance(page[items_key], list):
-        return page[items_key]
+        return cast(List[Any], page[items_key])
     for key in (
         "agents",
         "conversations",
@@ -84,5 +84,5 @@ def extract_items(
         "keys",
     ):
         if key in page and isinstance(page[key], list):
-            return page[key]
+            return cast(List[Any], page[key])
     return []

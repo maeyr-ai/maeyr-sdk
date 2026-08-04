@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, List, Optional
 
 from viksa_ai._constants import SERVICE_PATHS
 from viksa_ai.client.pagination import iter_pages
-from viksa_ai.models.agent import AgentCreationRequest, AgentUpdateRequest
+from viksa_ai.models.agent import (
+    AgentCreationRequest,
+    AgentDeletionResult,
+    AgentUpdateRequest,
+)
 
 if TYPE_CHECKING:
     from viksa_ai.client.base import ViksaClient
@@ -19,7 +23,11 @@ class _AgentsClient:
 
     async def create(self, request: AgentCreationRequest) -> Dict[str, Any]:
         return await self._builder._client._arequest(
-            "POST", _BUILDER, "/agent/create", json=request.model_dump(mode="json")
+            "POST",
+            _BUILDER,
+            "/agent/create",
+            json=request.model_dump(mode="json"),
+            headers={"Idempotency-Key": request.idempotency_key},
         )
 
     async def list(
@@ -52,8 +60,11 @@ class _AgentsClient:
             "PUT", _BUILDER, f"/agent/{agent_id}", json=body
         )
 
-    async def delete(self, agent_id: str) -> Dict[str, Any]:
-        return await self._builder._client._arequest("DELETE", _BUILDER, f"/agent/{agent_id}")
+    async def delete(self, agent_id: str) -> AgentDeletionResult:
+        payload = await self._builder._client._arequest(
+            "DELETE", _BUILDER, f"/agent/{agent_id}"
+        )
+        return AgentDeletionResult.model_validate(payload)
 
     async def set_status(self, agent_id: str, *, enabled: bool) -> Dict[str, Any]:
         status = "enabled" if enabled else "disabled"

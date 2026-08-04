@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, AsyncIterator, Dict, Iterator, Literal, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Literal, Optional, cast
 
 import httpx
 
@@ -282,16 +282,19 @@ class ViksaClient:
         headers: Optional[Dict[str, str]] = None,
         retry: Optional[RetryConfig] = None,
         _retry_auth: bool = True,
-    ) -> Any:
+    ) -> Dict[str, Any]:
         try:
-            return await self._transport.arequest(
-                method,
-                prefix,
-                path,
-                json=json,
-                params=params,
-                headers=headers,
-                retry=retry,
+            return cast(
+                Dict[str, Any],
+                await self._transport.arequest(
+                    method,
+                    prefix,
+                    path,
+                    json=json,
+                    params=params,
+                    headers=headers,
+                    retry=retry,
+                ),
             )
         except ViksaApiError as exc:
             if (
@@ -325,16 +328,19 @@ class ViksaClient:
         headers: Optional[Dict[str, str]] = None,
         retry: Optional[RetryConfig] = None,
         _retry_auth: bool = True,
-    ) -> Any:
+    ) -> Dict[str, Any]:
         try:
-            return self._transport.request(
-                method,
-                prefix,
-                path,
-                json=json,
-                params=params,
-                headers=headers,
-                retry=retry,
+            return cast(
+                Dict[str, Any],
+                self._transport.request(
+                    method,
+                    prefix,
+                    path,
+                    json=json,
+                    params=params,
+                    headers=headers,
+                    retry=retry,
+                ),
             )
         except ViksaApiError as exc:
             if (

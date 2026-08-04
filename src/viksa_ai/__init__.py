@@ -1,8 +1,8 @@
 """Viksa AI platform SDK."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-__version__ = "0.2.6"
+__version__ = "0.2.8"
 
 __all__ = [
     "ViksaApiError",
@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name == "ViksaClient":
         from viksa_ai.client import ViksaClient
 

@@ -324,7 +324,7 @@ Use `client.request(method, prefix, path)` for any route not yet wrapped.
 | `list(skip, limit, search)` | `GET /agent/list` | Paginated agent list |
 | `get(agent_id)` | `GET /agent/{id}` | Agent detail |
 | `update(agent_id, request)` | `PUT /agent/{id}` | `AgentUpdateRequest` |
-| `delete(agent_id)` | `DELETE /agent/{id}` | Delete agent |
+| `delete(agent_id)` | `DELETE /agent/{id}` | Returns typed `AgentDeletionResult`; only `result.complete` means deletion finished. `approval_pending` and `quota_release_pending` must be retried/observed. |
 | `set_endpoint_status(agent_id, name, enabled=...)` | `PATCH /agent/{id}/endpoint/{name}/status` | Enable/disable endpoint |
 | `revisions`, `revision`, `share`, `set_status` | agent lifecycle | |
 | `iter_all()` | paginated `list` | Async iterator over all agents |
@@ -446,7 +446,7 @@ result = await client.pulse.execute(
 
 | Method | HTTP | Description |
 |--------|------|-------------|
-| `create(body)` | `POST /scheduler/schedule/create` | Create schedule |
+| `create(body, schedule_id=...)` | `POST /scheduler/schedule/create` | Create schedule with a stable retry ID |
 | `list(skip, limit)` | `GET /scheduler/schedule/list` | List schedules |
 | `get(schedule_id)` | `GET /scheduler/schedule/{id}` | Schedule detail |
 | `update(schedule_id, body)` | `PATCH /scheduler/schedule/{id}` | Update schedule |
@@ -534,6 +534,8 @@ async for conv in client.chat.iter_conversations():
 ### SSE streaming
 
 `client.chat.stream_indent_finder` yields parsed JSON objects from `data: {...}` SSE lines.
+Both `indent_finder` variants accept `schedule_id=...`; reuse it when retrying
+an ambiguous chat turn that may have created a schedule.
 
 `ViksaClient.iter_sse_lines(response)` is a static helper for custom streaming endpoints.
 
@@ -699,6 +701,27 @@ pip install -e ".[dev]"
 pytest
 ruff check src tests
 ruff format src tests
+```
+
+Build release wheels from the source distribution in a clean wheel directory,
+not from a reusable `build/lib` tree. This prevents files removed during a
+module consolidation from leaking into a later wheel:
+
+```bash
+python -m build --sdist
+python -m pip wheel --no-deps --no-build-isolation \
+  --wheel-dir dist/wheelhouse dist/viksa_ai-*.tar.gz
+```
+
+Before publishing, inspect the wheel, confirm `viksa_ai/py.typed` is present,
+and run imports with the wheel as the only project path. The current MCP bridge
+artifact contains only `__init__.py`, `cli.py`, and `gateway.py`; the retired
+discovery, mappings, registry, server, and tools modules must not reappear.
+The exact source-to-wheel check is executable:
+
+```bash
+python scripts/verify_wheel_manifest.py \
+  dist/wheelhouse/viksa_ai-*.whl src/viksa_ai
 ```
 
 CI runs on push and pull requests to `main` (Python 3.10–3.12). Release versions are tagged as `v*` on this repository.
