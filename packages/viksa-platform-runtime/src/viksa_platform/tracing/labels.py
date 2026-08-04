@@ -17,11 +17,7 @@ def derive_labels(
 
     if status == "error":
         error_type = str(attrs.get("error.type") or attrs.get("error_type") or "").lower()
-        if (
-            "llm" in error_type
-            or operation == "llm_call"
-            or (span_name or "").startswith("llm.")
-        ):
+        if "llm" in error_type or operation == "llm_call" or (span_name or "").startswith("llm."):
             labels.append("llm_error")
         elif "http" in error_type or operation == "http_client":
             labels.append("api_error")

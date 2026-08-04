@@ -47,6 +47,7 @@ def configure_trace_context_provider(provider: TraceContextProvider) -> None:
 def _active_trace_context() -> TraceContextView | None:
     return _trace_context_provider()
 
+
 # Context variables
 trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
 span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("span_id", default=None)

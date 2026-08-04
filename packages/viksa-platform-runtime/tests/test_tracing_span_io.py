@@ -36,9 +36,7 @@ def test_wide_collections_are_bounded_before_json_encoding() -> None:
             max_chars=20_000,
         )
     )
-    sequence = json.loads(
-        serialize_trace_value(list(range(1_000)), max_chars=20_000)
-    )
+    sequence = json.loads(serialize_trace_value(list(range(1_000)), max_chars=20_000))
 
     assert len(mapping) == 51
     assert mapping["<truncated>"] == "<truncated>"

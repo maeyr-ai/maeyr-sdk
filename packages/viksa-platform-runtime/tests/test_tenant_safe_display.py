@@ -6,7 +6,6 @@ import json
 from typing import Any
 
 from fastapi import HTTPException
-
 from viksa_platform.security import tenant_safe_display as display
 
 PUBLIC_CALLABLES = {
@@ -101,9 +100,7 @@ def _resume_state() -> dict[str, Any]:
                 "content": '{"access_token": "tool-secret"}',
             },
         ],
-        "harness_active_agents": [
-            {"agent_alias": "payments", "api_token": "agent-secret"}
-        ],
+        "harness_active_agents": [{"agent_alias": "payments", "api_token": "agent-secret"}],
         "harness_pending_approvals": [
             {
                 "tool_call_id": "call-1",
@@ -111,12 +108,8 @@ def _resume_state() -> dict[str, Any]:
                 "execution_config": {"access_token": "config-secret"},
             }
         ],
-        "harness_pending_approval": {
-            "inputs": {"amount": 20, "api_key": "legacy-approval-secret"}
-        },
-        "pending_endpoint_approval": {
-            "inputs": {"amount": 30, "secret": "endpoint-secret"}
-        },
+        "harness_pending_approval": {"inputs": {"amount": 20, "api_key": "legacy-approval-secret"}},
+        "pending_endpoint_approval": {"inputs": {"amount": 30, "secret": "endpoint-secret"}},
     }
 
 
@@ -263,9 +256,7 @@ def test_private_resume_state_is_stripped_recursively_but_public_state_remains()
 
     safe = display.strip_resume_state_secrets(payload)
 
-    assert safe == {
-        "events": [{"payload": {"resume_state_public": {"kind": "approval"}}}]
-    }
+    assert safe == {"events": [{"payload": {"resume_state_public": {"kind": "approval"}}}]}
 
 
 def test_pause_resolution_prefers_internal_state_and_rejects_legacy_approval() -> None:
@@ -350,9 +341,7 @@ def test_chat_client_and_llm_metadata_strip_server_only_resume_state() -> None:
     client = display.chat_message_metadata_for_client(metadata)
     tenant = display.sanitize_chat_message_metadata_for_tenant(metadata)
     llm = display.sanitize_message_metadata_for_llm(metadata)
-    message = display.sanitize_chat_message_for_tenant(
-        {"role": "assistant", "metadata": metadata}
-    )
+    message = display.sanitize_chat_message_for_tenant({"role": "assistant", "metadata": metadata})
 
     for safe in (client, tenant, llm, message["metadata"]):
         serialized = json.dumps(safe)
@@ -410,9 +399,7 @@ def test_execution_summary_projects_public_state_without_private_resume_blob() -
             "awaiting_approval": True,
             "resume_state": {
                 "task_outputs": {"t1": {"api_token": "secret"}},
-                "pending_endpoint_approval": {
-                    "inputs": {"api_key": "approval-key"}
-                },
+                "pending_endpoint_approval": {"inputs": {"api_key": "approval-key"}},
             },
             "summary": "tenant-visible summary",
         },
@@ -422,9 +409,7 @@ def test_execution_summary_projects_public_state_without_private_resume_blob() -
     assert output["summary"] == "tenant-visible summary"
     assert output["resume_state_public"]["kind"] == "approval"
     assert (
-        output["resume_state_public"]["pending_endpoint_approval"]["inputs"][
-            "api_key"
-        ]
+        output["resume_state_public"]["pending_endpoint_approval"]["inputs"]["api_key"]
         == "[redacted]"
     )
     assert "secret" not in json.dumps(output)

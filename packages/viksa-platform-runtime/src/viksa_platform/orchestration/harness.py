@@ -149,9 +149,7 @@ class OrchestrationHarness:
                 if self._budget_policy is None:
                     assistant: AssistantTurn = await self._llm_call(messages, tools)
                 else:
-                    remaining = self._budget_policy.remaining_seconds(
-                        self._budget_state
-                    )
+                    remaining = self._budget_policy.remaining_seconds(self._budget_state)
                     assistant = await asyncio.wait_for(
                         self._llm_call(messages, tools),
                         timeout=max(0.001, remaining),
@@ -180,18 +178,12 @@ class OrchestrationHarness:
                 self._budget_state.add_usage(assistant.tokens_used)
             actual_budget_reason: Optional[str] = None
             if self._budget_policy is not None:
-                if (
-                    assistant.tool_calls
-                    and self._budget_policy.token_limit_reached(
-                        self._budget_state
-                    )
+                if assistant.tool_calls and self._budget_policy.token_limit_reached(
+                    self._budget_state
                 ):
                     actual_budget_reason = BudgetReason.CUMULATIVE_TOKENS
-                elif (
-                    not assistant.tool_calls
-                    and self._budget_policy.token_limit_exceeded(
-                        self._budget_state
-                    )
+                elif not assistant.tool_calls and self._budget_policy.token_limit_exceeded(
+                    self._budget_state
                 ):
                     actual_budget_reason = BudgetReason.CUMULATIVE_TOKENS
             yield HarnessEvent(
@@ -240,14 +232,12 @@ class OrchestrationHarness:
             input_requests: Dict[str, Tuple[ToolCall, Any]] = {}
             tool_timed_out = False
             try:
-                async for ev in self._stream_tools_with_timeout(
-                    assistant.tool_calls
-                ):
+                async for ev in self._stream_tools_with_timeout(assistant.tool_calls):
                     if ev.type == HarnessEventType.TOOL_RESULT:
                         res: ToolResult = ev.payload["tool_result"]
                         if self._budget_policy is not None:
-                            bounded, tool_budget_event = (
-                                self._budget_policy.limit_tool_result(res.content)
+                            bounded, tool_budget_event = self._budget_policy.limit_tool_result(
+                                res.content
                             )
                             res.content = bounded
                             if tool_budget_event is not None:
@@ -284,13 +274,9 @@ class OrchestrationHarness:
                 if call.id in results:
                     messages.append(_tool_message(results[call.id]))
                 elif call.id in approvals:
-                    messages.append(
-                        _placeholder_tool_message(call, "awaiting user approval")
-                    )
+                    messages.append(_placeholder_tool_message(call, "awaiting user approval"))
                 elif call.id in input_requests:
-                    messages.append(
-                        _placeholder_tool_message(call, "awaiting user input")
-                    )
+                    messages.append(_placeholder_tool_message(call, "awaiting user input"))
                 else:
                     # Defensive fallback for a malformed executor terminal event.
                     messages.append(
@@ -312,9 +298,7 @@ class OrchestrationHarness:
                 return
 
             ordered_approvals = [
-                approvals[call.id]
-                for call in assistant.tool_calls
-                if call.id in approvals
+                approvals[call.id] for call in assistant.tool_calls if call.id in approvals
             ]
             ordered_inputs = [
                 input_requests[call.id]
@@ -389,9 +373,7 @@ class OrchestrationHarness:
         finally:
             await stream.aclose()
 
-    async def _stream_tools(
-        self, tool_calls: List[ToolCall]
-    ) -> AsyncGenerator[HarnessEvent, None]:
+    async def _stream_tools(self, tool_calls: List[ToolCall]) -> AsyncGenerator[HarnessEvent, None]:
         """Run every tool call concurrently and stream all their events.
 
         Each call's ``run_tool`` generator runs in its own task and pushes events

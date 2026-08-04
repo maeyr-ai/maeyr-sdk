@@ -107,23 +107,18 @@ async def _bounded_httpx_request(
             except ValueError:
                 content_length = None
             if content_length is not None and content_length > max_response_bytes:
-                raise HTTPResponseTooLargeError(
-                    "HTTP response exceeds the configured size limit"
-                )
+                raise HTTPResponseTooLargeError("HTTP response exceeds the configured size limit")
 
         content = bytearray()
         async for chunk in response.aiter_bytes():
             if len(content) + len(chunk) > max_response_bytes:
-                raise HTTPResponseTooLargeError(
-                    "HTTP response exceeds the configured size limit"
-                )
+                raise HTTPResponseTooLargeError("HTTP response exceeds the configured size limit")
             content.extend(chunk)
 
         decoded_headers = [
             (name, value)
             for name, value in response.headers.multi_items()
-            if name.lower()
-            not in {"content-encoding", "content-length", "transfer-encoding"}
+            if name.lower() not in {"content-encoding", "content-length", "transfer-encoding"}
         ]
         return httpx.Response(
             status_code=response.status_code,

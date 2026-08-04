@@ -1,4 +1,5 @@
 """Tenant-boundary redaction for displays, streams, and execution records."""
+
 from __future__ import annotations
 
 import json
@@ -489,9 +490,7 @@ def redact_resume_state_for_tenant_view(
     if "harness_messages" in out:
         out["harness_messages"] = _redact_harness_messages(out.get("harness_messages"))
     if "harness_active_agents" in out:
-        out["harness_active_agents"] = redact_sensitive_structure(
-            out.get("harness_active_agents")
-        )
+        out["harness_active_agents"] = redact_sensitive_structure(out.get("harness_active_agents"))
     if "harness_pending_approvals" in out:
         out["harness_pending_approvals"] = _redact_pending_approval_inputs(
             out.get("harness_pending_approvals")
@@ -536,9 +535,7 @@ def sanitize_execution_document_for_tenant(
         if key in out and out[key] is not None:
             out[key] = sanitize_execution_persisted_blob(out[key])
     if out.get(RESUME_STATE_PUBLIC_KEY):
-        out[RESUME_STATE_PUBLIC_KEY] = sanitize_resume_event_payload(
-            out[RESUME_STATE_PUBLIC_KEY]
-        )
+        out[RESUME_STATE_PUBLIC_KEY] = sanitize_resume_event_payload(out[RESUME_STATE_PUBLIC_KEY])
     if out.get("resume_state"):
         # Migration-only API fallback: expose the same minimal projection that
         # new records store, never the full legacy continuation object.
@@ -618,9 +615,7 @@ def chat_message_metadata_for_client(
     out = cast(Dict[str, Any], strip_resume_state_secrets(dict(metadata)))
     log = out.get("execution_log")
     if isinstance(log, list):
-        out["execution_log"] = [
-            _strip_server_only_execution_log_row(row) for row in log
-        ]
+        out["execution_log"] = [_strip_server_only_execution_log_row(row) for row in log]
     return out
 
 
@@ -690,9 +685,7 @@ def sanitize_chat_message_metadata_for_tenant(
     out = cast(Dict[str, Any], strip_resume_state_secrets(dict(metadata)))
     log = out.get("execution_log")
     if isinstance(log, list):
-        out["execution_log"] = [
-            _sanitize_execution_log_row_for_tenant(row) for row in log
-        ]
+        out["execution_log"] = [_sanitize_execution_log_row_for_tenant(row) for row in log]
     return out
 
 
@@ -725,9 +718,7 @@ def sanitize_trigger_dry_run_preview(
     for key in ("combined_prompt", "prompt"):
         val = out.get(key)
         if isinstance(val, str):
-            out[key] = _truncate_field(
-                redact_inline_secrets_in_text(val), _LARGE_FIELD_MAX
-            )
+            out[key] = _truncate_field(redact_inline_secrets_in_text(val), _LARGE_FIELD_MAX)
     for body_key in ("body_passed_to_prompt", "test_payload", "webhook_payload"):
         body = out.get(body_key)
         if isinstance(body, dict):
@@ -746,11 +737,7 @@ def sanitize_task_result_for_stream(result: Any) -> Any:
         if str(result.get("status") or "").lower() == "error":
             raw_err = result.get("error")
             text = (
-                raw_err
-                if isinstance(raw_err, str)
-                else str(raw_err)
-                if raw_err is not None
-                else ""
+                raw_err if isinstance(raw_err, str) else str(raw_err) if raw_err is not None else ""
             )
             return {
                 "status": "error",
@@ -866,11 +853,7 @@ def sanitize_persisted_event_data(
     ) -> Any:
         if key in _PERSISTED_ERROR_KEYS:
             if depth == 0 or parent_key in _NESTED_ERROR_PARENT_KEYS:
-                text = (
-                    value
-                    if isinstance(value, str)
-                    else str(value) if value is not None else ""
-                )
+                text = value if isinstance(value, str) else str(value) if value is not None else ""
                 return tenant_safe_trace_message(text, fallback=error_fallback)
         if key in _STREAM_CONTENT_KEYS:
             if isinstance(value, str):
@@ -880,9 +863,7 @@ def sanitize_persisted_event_data(
             return value
         if key in _LARGE_FIELD_KEYS:
             if isinstance(value, str):
-                return _truncate_field(
-                    redact_inline_secrets_in_text(value), large_field_max
-                )
+                return _truncate_field(redact_inline_secrets_in_text(value), large_field_max)
             if isinstance(value, dict):
                 return {
                     str(k): _walk(
@@ -923,8 +904,7 @@ def sanitize_persisted_event_data(
             return _truncate_field(value, max_string_len)
         if isinstance(value, dict):
             return {
-                str(k): _walk(str(k), v, depth=depth + 1, parent_key=key)
-                for k, v in value.items()
+                str(k): _walk(str(k), v, depth=depth + 1, parent_key=key) for k, v in value.items()
             }
         if isinstance(value, list):
             out: List[Any] = []
@@ -945,10 +925,7 @@ def sanitize_persisted_event_data(
 
     if not data:
         return {}
-    return {
-        str(k): _walk(str(k), v, depth=initial_depth, parent_key=None)
-        for k, v in data.items()
-    }
+    return {str(k): _walk(str(k), v, depth=initial_depth, parent_key=None) for k, v in data.items()}
 
 
 def sanitize_stream_execution_summary_data(
@@ -1050,9 +1027,7 @@ def sanitize_resume_input_request(
     options = out.get("options")
     if isinstance(options, list):
         out["options"] = [
-            sanitize_tenant_display_text(item, max_len=500)
-            if isinstance(item, str)
-            else item
+            sanitize_tenant_display_text(item, max_len=500) if isinstance(item, str) else item
             for item in options
         ]
     return out
@@ -1126,9 +1101,7 @@ def sanitize_run_event_document_for_tenant(
         msg = err.get("message")
         if isinstance(msg, str):
             err = dict(err)
-            err["message"] = tenant_safe_trace_message(
-                msg, fallback=TRACE_ERROR_RUN_FAILED
-            )
+            err["message"] = tenant_safe_trace_message(msg, fallback=TRACE_ERROR_RUN_FAILED)
             out["error"] = err
     return out
 

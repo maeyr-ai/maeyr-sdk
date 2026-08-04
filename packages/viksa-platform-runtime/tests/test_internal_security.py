@@ -5,7 +5,6 @@ import hashlib
 import hmac
 
 import pytest
-
 from viksa_platform.compat.internal_tenant_headers import (
     internal_tenant_headers,
     internal_tenant_headers_from_mapping,
@@ -133,16 +132,19 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
     )
     expected = hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 
-    assert build_canonical_string(
-        method="post",
-        path="/internal/test",
-        timestamp="4000",
-        body=body,
-        account_id="AC-1",
-        org_id="OR-1",
-        project_id="PR-1",
-        service="worker-service",
-    ) == canonical
+    assert (
+        build_canonical_string(
+            method="post",
+            path="/internal/test",
+            timestamp="4000",
+            body=body,
+            account_id="AC-1",
+            org_id="OR-1",
+            project_id="PR-1",
+            service="worker-service",
+        )
+        == canonical
+    )
     headers = sign_internal_request(
         secret,
         method="post",

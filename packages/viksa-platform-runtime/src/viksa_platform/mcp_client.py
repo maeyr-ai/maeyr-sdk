@@ -107,9 +107,7 @@ def _match_client(user_agent: str) -> tuple[str, str, str | None]:
 def resolve_mcp_client(headers: Mapping[str, str]) -> MCPClientInfo:
     """Resolve an MCP caller from explicit metadata or its user-agent string."""
 
-    override = _header(headers, "x-mcp-client") or _header(
-        headers, "x-viksa-mcp-client"
-    )
+    override = _header(headers, "x-mcp-client") or _header(headers, "x-viksa-mcp-client")
     user_agent = _header(headers, "user-agent") or ""
     protocol_version = _header(headers, "mcp-protocol-version")
     if override:

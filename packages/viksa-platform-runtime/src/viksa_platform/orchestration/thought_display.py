@@ -123,7 +123,9 @@ def _registry_label(call: ToolCall, registry: Mapping[str, Any]) -> str:
     spec = registry.get(call.name)
     if spec is None:
         return call.name.replace("_", " ")
-    agent = getattr(spec, "agent_alias", None) or (spec.get("agent_alias") if isinstance(spec, dict) else None)
+    agent = getattr(spec, "agent_alias", None) or (
+        spec.get("agent_alias") if isinstance(spec, dict) else None
+    )
     endpoint_name = getattr(spec, "endpoint_name", None) or (
         spec.get("endpoint_name") if isinstance(spec, dict) else None
     )
@@ -166,8 +168,7 @@ def _reasoning_for_calls(
         return "I have enough information to provide the final answer."
 
     agent_calls = [
-        c for c in tool_calls
-        if c.name not in (FIND_TOOLS_NAME, LOAD_TOOLS_NAME, ASK_USER_NAME)
+        c for c in tool_calls if c.name not in (FIND_TOOLS_NAME, LOAD_TOOLS_NAME, ASK_USER_NAME)
     ]
     meta_calls = [c for c in tool_calls if c not in agent_calls]
 
@@ -187,8 +188,7 @@ def _reasoning_for_calls(
         args_text = _format_arguments(call.arguments or {})
         if description:
             return _truncate(
-                f"To accomplish “{goal}”, use {label}. {description} "
-                f"Proceeding with {args_text}.",
+                f"To accomplish “{goal}”, use {label}. {description} Proceeding with {args_text}.",
                 _MAX_REASON_CHARS,
             )
         return _truncate(
@@ -201,8 +201,7 @@ def _reasoning_for_calls(
         joined = ", ".join(labels)
         extra = f" and {len(agent_calls) - 4} more" if len(agent_calls) > 4 else ""
         return _truncate(
-            f"“{goal}” needs {len(agent_calls)} independent lookups in parallel: "
-            f"{joined}{extra}.",
+            f"“{goal}” needs {len(agent_calls)} independent lookups in parallel: {joined}{extra}.",
             _MAX_REASON_CHARS,
         )
 
@@ -245,20 +244,14 @@ def build_thought_complete_display(
     prior = _collect_tool_observations(messages)
 
     if prior:
-        observation = "From the previous step(s):\n" + "\n".join(
-            f"- {line}" for line in prior
-        )
+        observation = "From the previous step(s):\n" + "\n".join(f"- {line}" for line in prior)
     elif iteration <= 1:
         scope = (
             f"{active_tool_count} tool(s) are in scope for this run."
             if active_tool_count
             else "No agent tools are loaded yet."
         )
-        observation = (
-            f'The user requested: "{_truncate(query, 300)}". {scope}'
-            if query
-            else scope
-        )
+        observation = f'The user requested: "{_truncate(query, 300)}". {scope}' if query else scope
     else:
         observation = (
             f'Continuing work on: "{_truncate(query, 300)}".'

@@ -4,7 +4,6 @@ from collections.abc import AsyncIterator
 
 import httpx
 import pytest
-
 from viksa_platform.tracing.http_client import (
     HTTPResponseTooLargeError,
     traced_httpx_request,

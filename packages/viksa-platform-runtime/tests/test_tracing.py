@@ -4,7 +4,6 @@ import asyncio
 from collections.abc import Sequence
 
 import pytest
-
 from viksa_platform.lifecycle import BoundedAsyncLifecycle, BufferConfig
 from viksa_platform.tracing import (
     BufferedTraceRecorder,

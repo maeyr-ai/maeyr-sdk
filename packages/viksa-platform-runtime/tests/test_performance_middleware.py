@@ -4,7 +4,6 @@ from collections.abc import Callable, Iterator
 
 import pytest
 from fastapi import Request, Response
-
 from viksa_platform.observability.performance import (
     create_request_performance_middleware,
 )
@@ -60,9 +59,7 @@ async def test_success_adds_timing_header_and_logs_only_slow_requests() -> None:
 
     assert isinstance(response, Response)
     assert response.headers["X-Process-Time"] == "1.25"
-    assert logger.warnings == [
-        ("Slow request: %s %s took %.2fs", ("GET", "/health", 1.25))
-    ]
+    assert logger.warnings == [("Slow request: %s %s took %.2fs", ("GET", "/health", 1.25))]
     assert logger.errors == []
 
 

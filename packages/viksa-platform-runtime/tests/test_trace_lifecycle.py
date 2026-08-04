@@ -6,7 +6,6 @@ from types import ModuleType
 from typing import Any
 
 import pytest
-
 from viksa_platform.tracing import lifecycle
 
 
@@ -58,10 +57,13 @@ def test_span_handle_and_duration_resolution_preserve_boundary_rules(
 
     wall_handle = lifecycle.SpanHandle("wall", started_at, None)
     assert lifecycle.resolve_duration_ms(wall_handle, ended_at=ended_at) == (ended_at, 125)
-    assert lifecycle.resolve_duration_ms(
-        wall_handle,
-        ended_at=started_at - timedelta(seconds=1),
-    )[1] == 0
+    assert (
+        lifecycle.resolve_duration_ms(
+            wall_handle,
+            ended_at=started_at - timedelta(seconds=1),
+        )[1]
+        == 0
+    )
 
 
 def test_scheduled_root_lifecycle_delegates_with_exact_payload(

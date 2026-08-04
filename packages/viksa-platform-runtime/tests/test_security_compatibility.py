@@ -6,7 +6,6 @@ from importlib import import_module
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
-
 from viksa_platform.security.internal import (
     requires_internal_signature,
     sign_internal_request,
@@ -86,9 +85,7 @@ def test_production_environment_wins_over_insecure_escape_hatch(
 
 
 def test_internal_tenant_helpers_preserve_headers_and_fastapi_errors() -> None:
-    assert internal_tenant_headers(
-        account_id=" a ", org_id=" o ", project_id=" p "
-    ) == {
+    assert internal_tenant_headers(account_id=" a ", org_id=" o ", project_id=" p ") == {
         "X-Internal-Account-Id": "a",
         "X-Internal-Org-Id": "o",
         "X-Internal-Project-Id": "p",

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from viksa_platform.directory.access_policy import VoltAccessPolicy
 from viksa_platform.directory.project_user_csv import (
     format_project_users_csv,

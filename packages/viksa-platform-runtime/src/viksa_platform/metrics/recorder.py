@@ -104,8 +104,7 @@ async def record_usage(
 
     total = tokens_used or ((prompt_tokens or 0) + (completion_tokens or 0))
     doc: dict[str, Any] = {
-        "_id": override_kwargs.get("_id")
-        or f"{PREFIX_TOKEN_USAGE}-{secrets.token_hex(16)}",
+        "_id": override_kwargs.get("_id") or f"{PREFIX_TOKEN_USAGE}-{secrets.token_hex(16)}",
         "account_id": base.get("account_id", "unknown"),
         "org_id": base.get("org_id", ""),
         "project_id": base.get("project_id", ""),
@@ -311,11 +310,7 @@ async def _stop_automatic_worker_after_manual_flush() -> None:
     """Let legacy manual flush callers take ownership without orphaning a task."""
     global _automatically_started, _flush_task, _flush_wakeup, _running
     task = _flush_task
-    if (
-        not _automatically_started
-        or task is None
-        or asyncio.current_task() is task
-    ):
+    if not _automatically_started or task is None or asyncio.current_task() is task:
         return
     _running = False
     task.cancel()

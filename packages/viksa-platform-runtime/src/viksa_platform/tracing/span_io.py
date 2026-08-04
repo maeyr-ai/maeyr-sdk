@@ -107,9 +107,7 @@ _ASSIGNMENT_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
-_AUTHORIZATION_RE = re.compile(
-    r"(?i)(\bauthorization\b\s*[:=]\s*)(?:(?:basic|bearer)\s+)?[^\s,;]+"
-)
+_AUTHORIZATION_RE = re.compile(r"(?i)(\bauthorization\b\s*[:=]\s*)(?:(?:basic|bearer)\s+)?[^\s,;]+")
 _BEARER_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+")
 _URI_CREDENTIAL_RE = re.compile(
     r"(?P<scheme>\b[a-z][a-z0-9+.-]*://)[^/@\s:]+:[^/@\s]+@",

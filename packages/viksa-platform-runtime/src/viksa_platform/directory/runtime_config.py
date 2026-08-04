@@ -37,9 +37,7 @@ class RuntimeSettings(BaseSettings):
     RUNTIME_DEPLOYMENT_PREFIX: str = os.environ.get(
         "VOLT_RUNTIME_DEPLOYMENT_PREFIX", "volt-runtime"
     )
-    RUNTIME_SECRET_PREFIX: str = os.environ.get(
-        "VOLT_RUNTIME_SECRET_PREFIX", "volt-runtime-secret"
-    )
+    RUNTIME_SECRET_PREFIX: str = os.environ.get("VOLT_RUNTIME_SECRET_PREFIX", "volt-runtime-secret")
     RUNTIME_IMAGE: str = os.environ.get("VOLT_RUNTIME_IMAGE", "volt/slack:latest")
     RUNTIME_PULL_SECRET: str = os.environ.get("VOLT_RUNTIME_PULL_SECRET", "regcred-registry")
     RUNTIME_PULL_POLICY: str = os.environ.get("VOLT_RUNTIME_PULL_POLICY", "Always")

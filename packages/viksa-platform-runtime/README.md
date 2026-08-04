@@ -68,8 +68,14 @@ delivery.
 python -m pip install -e '.[dev]'
 pytest
 ruff check src tests
+ruff format --check src tests
 mypy
 python -m build
+python -m twine check dist/*
+python ../../scripts/verify_python_release.py \
+  --project-directory . \
+  --dist-directory dist \
+  --expected-name viksa-platform-runtime
 ```
 
 The distribution supports Python 3.10–3.12.

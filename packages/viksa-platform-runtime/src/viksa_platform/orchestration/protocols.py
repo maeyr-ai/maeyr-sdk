@@ -141,9 +141,7 @@ class HarnessEvent:
         )
 
     @classmethod
-    def user_input_required(
-        cls, tool_call: ToolCall, input_request: Any
-    ) -> "HarnessEvent":
+    def user_input_required(cls, tool_call: ToolCall, input_request: Any) -> "HarnessEvent":
         return cls(
             HarnessEventType.USER_INPUT_REQUIRED,
             {"tool_call": tool_call, "input_request": input_request},
@@ -160,5 +158,4 @@ RunTool = Callable[[ToolCall], AsyncGenerator[HarnessEvent, None]]
 class ToolExecutor(Protocol):
     """Optional class form of ``run_tool`` for hosts that prefer objects."""
 
-    def __call__(self, tool_call: ToolCall) -> AsyncGenerator[HarnessEvent, None]:
-        ...
+    def __call__(self, tool_call: ToolCall) -> AsyncGenerator[HarnessEvent, None]: ...

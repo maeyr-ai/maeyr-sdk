@@ -502,9 +502,7 @@ class RemoteTraceRecorder:
                 return True
             if not retryable or attempt >= self._max_retries:
                 return False
-            await asyncio.sleep(
-                min(_RETRY_BASE_SECONDS * (2 ** (attempt - 1)), 2.0)
-            )
+            await asyncio.sleep(min(_RETRY_BASE_SECONDS * (2 ** (attempt - 1)), 2.0))
         return False
 
     async def _post(self, spans: list[dict[str, Any]]) -> bool:
@@ -549,8 +547,7 @@ class RemoteTraceRecorder:
                     self._dropped_spans += dropped
                     if dropped:
                         logger.warning(
-                            "Remote trace drain cancelled service=%s "
-                            "dropped=%s dropped_total=%s",
+                            "Remote trace drain cancelled service=%s dropped=%s dropped_total=%s",
                             self.service,
                             dropped,
                             self._dropped_spans,
@@ -560,8 +557,7 @@ class RemoteTraceRecorder:
                     failed = len(batch) - processed
                     self._failed_spans += failed
                     logger.error(
-                        "Remote trace batch failed service=%s count=%s "
-                        "error_type=%s",
+                        "Remote trace batch failed service=%s count=%s error_type=%s",
                         self.service,
                         failed,
                         type(exc).__name__,
@@ -668,17 +664,10 @@ async def shutdown_remote_traces(
 ) -> None:
     """Compatibility shutdown API used by service-local hardened adapters."""
     names = [service] if service else list(_recorders)
-    recorders = [
-        _recorders[name]
-        for name in names
-        if name is not None and name in _recorders
-    ]
+    recorders = [_recorders[name] for name in names if name is not None and name in _recorders]
     if recorders:
         await asyncio.gather(
-            *(
-                recorder.close(timeout_seconds=timeout_seconds)
-                for recorder in recorders
-            )
+            *(recorder.close(timeout_seconds=timeout_seconds) for recorder in recorders)
         )
     for name in names:
         if name is not None:

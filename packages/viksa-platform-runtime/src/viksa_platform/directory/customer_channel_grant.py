@@ -117,15 +117,12 @@ class CustomerChannelGrantOperations:
             raise ValueError(f"customer_user_id '{customer_id}' not found")
         if not self._dependencies.is_master_user(user):
             raise ValueError(
-                "Identity auto-link applies to master customers only "
-                f"(got '{customer_id}')"
+                f"Identity auto-link applies to master customers only (got '{customer_id}')"
             )
 
         existing_link = await user_store.get_identity_link(channel_key, external_id)
         if existing_link:
-            linked_customer_id = str(
-                existing_link.get("customer_user_id") or ""
-            ).strip()
+            linked_customer_id = str(existing_link.get("customer_user_id") or "").strip()
             if linked_customer_id and linked_customer_id != customer_id:
                 raise ValueError(
                     f"Connector identity '{external_id}' on {channel_key} is already "
@@ -169,9 +166,7 @@ class CustomerChannelGrantOperations:
         schema = await user_store.get_schema()
         binding = self._dependencies.resolve_connector_binding(schema, channel_key)
         if not binding or not binding.get("profile_field"):
-            raise ValueError(
-                f"No connector primary key binding configured for {channel_key}"
-            )
+            raise ValueError(f"No connector primary key binding configured for {channel_key}")
 
         profile_field = str(binding["profile_field"])
         user = await user_store.get_user(customer_id)
@@ -179,8 +174,7 @@ class CustomerChannelGrantOperations:
             raise ValueError(f"customer_user_id '{customer_id}' not found")
         if not self._dependencies.is_master_user(user):
             raise ValueError(
-                "Connector profile sync applies to master customers only "
-                f"(got '{customer_id}')"
+                f"Connector profile sync applies to master customers only (got '{customer_id}')"
             )
 
         profile = dict(user.get("profile") or {})
@@ -216,9 +210,7 @@ class CustomerChannelGrantOperations:
             normalized_identity,
         )
         if existing_link:
-            linked_customer_id = str(
-                existing_link.get("customer_user_id") or ""
-            ).strip()
+            linked_customer_id = str(existing_link.get("customer_user_id") or "").strip()
             if linked_customer_id and linked_customer_id != customer_id:
                 raise ValueError(
                     f"Connector identity '{normalized_identity}' on {channel_key} "
@@ -275,11 +267,7 @@ class CustomerChannelGrantOperations:
         if not user:
             return False
         schema = await user_store.get_schema()
-        binding = (
-            self._dependencies.resolve_connector_binding(schema, channel)
-            if schema
-            else None
-        )
+        binding = self._dependencies.resolve_connector_binding(schema, channel) if schema else None
         if not binding or not binding.get("profile_field"):
             return False
         profile_field = str(binding["profile_field"])
@@ -390,9 +378,7 @@ class CustomerChannelGrantOperations:
                             }
                         )
                 except Exception as exc:
-                    failed.append(
-                        {"customer_user_id": customer_id, "error": str(exc)}
-                    )
+                    failed.append({"customer_user_id": customer_id, "error": str(exc)})
             if deleted > 0:
                 await self._dependencies.invalidate(scope)
             return {
@@ -424,9 +410,7 @@ class CustomerChannelGrantOperations:
                 if result.get("deleted"):
                     deleted += 1
                 else:
-                    failed.append(
-                        {"customer_user_id": customer_id, "error": "Not deleted"}
-                    )
+                    failed.append({"customer_user_id": customer_id, "error": "Not deleted"})
             except Exception as exc:
                 failed.append({"customer_user_id": customer_id, "error": str(exc)})
         if deleted > 0:
@@ -515,9 +499,7 @@ class CustomerChannelGrantOperations:
         row.pop("_id", None)
         profile = dict(row.get("profile") or {})
         row["connector_enabled"] = dict(row.get("connector_enabled") or {})
-        row["display_name"] = str(
-            profile.get("name") or profile.get("full_name") or ""
-        ).strip()
+        row["display_name"] = str(profile.get("name") or profile.get("full_name") or "").strip()
         return row
 
     async def get_customer_record(
@@ -546,11 +528,7 @@ class CustomerChannelGrantOperations:
             "customer_user_id": customer_id,
             "customer_enabled": bool(user_row.get("enabled", True)),
             "display_name": user_row.get("display_name") or "",
-            "user": {
-                key: value
-                for key, value in user_row.items()
-                if key != "display_name"
-            },
+            "user": {key: value for key, value in user_row.items() if key != "display_name"},
             "identities": identities,
             "channel_access": channel_access,
         }
@@ -574,20 +552,14 @@ class CustomerChannelGrantOperations:
         linked_external_id = ""
         for identity in await user_store.list_identities_for_user(customer_id):
             if str(identity.get("channel") or "").strip().lower() == channel_key:
-                linked_external_id = str(
-                    identity.get("external_user_id") or ""
-                ).strip()
+                linked_external_id = str(identity.get("external_user_id") or "").strip()
                 identity_value = linked_external_id
                 break
         schema = await user_store.get_schema()
         binding = (
-            self._dependencies.resolve_connector_binding(schema, channel_key)
-            if schema
-            else None
+            self._dependencies.resolve_connector_binding(schema, channel_key) if schema else None
         )
-        profile_field = (
-            str(binding.get("profile_field") or "") if binding else ""
-        )
+        profile_field = str(binding.get("profile_field") or "") if binding else ""
         profile = dict(user.get("profile") or {})
         candidates = self.customer_channel_grant_identities(
             channel_key,

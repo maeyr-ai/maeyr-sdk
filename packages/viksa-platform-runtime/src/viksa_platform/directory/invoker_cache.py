@@ -22,10 +22,7 @@ def _invoker_key(
     channel: str,
     external_user_id: str,
 ) -> str:
-    return (
-        f"volt:invoker:{account_id}:{org_id}:{project_id}:"
-        f"{channel}:{external_user_id}"
-    )
+    return f"volt:invoker:{account_id}:{org_id}:{project_id}:{channel}:{external_user_id}"
 
 
 def _schema_key(account_id: str, org_id: str, project_id: str) -> str:
@@ -56,9 +53,7 @@ async def get_invoker_cache(
     if not r:
         return None
     try:
-        raw = await r.get(
-            _invoker_key(account_id, org_id, project_id, channel, external_user_id)
-        )
+        raw = await r.get(_invoker_key(account_id, org_id, project_id, channel, external_user_id))
         if not raw:
             return None
         data = json.loads(raw)
@@ -104,12 +99,8 @@ async def invalidate_invoker_cache(
         return
     try:
         if channel and external_user_id:
-            await r.delete(
-                _invoker_key(account_id, org_id, project_id, channel, external_user_id)
-            )
-            await r.delete(
-                _identity_key(account_id, org_id, project_id, channel, external_user_id)
-            )
+            await r.delete(_invoker_key(account_id, org_id, project_id, channel, external_user_id))
+            await r.delete(_identity_key(account_id, org_id, project_id, channel, external_user_id))
             return
         pattern = f"volt:invoker:{account_id}:{org_id}:{project_id}:*"
         cursor = 0
@@ -255,9 +246,7 @@ async def get_project_user_identity_cache(
     if not r:
         return None
     try:
-        raw = await r.get(
-            _identity_key(account_id, org_id, project_id, channel, external_user_id)
-        )
+        raw = await r.get(_identity_key(account_id, org_id, project_id, channel, external_user_id))
         if not raw:
             return None
         data = json.loads(raw)

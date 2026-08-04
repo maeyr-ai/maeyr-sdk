@@ -108,7 +108,7 @@ def build_catalog_entries(agent_docs: Iterable[Dict[str, Any]]) -> List[Dict[str
         alias = a.get("agent_alias") or ""
         agent_id = str(a.get("_id") or a.get("id") or "")
         agent_name = a.get("agent_name") or ""
-        for ep in (a.get("agent_endpoints") or a.get("endpoints") or []):
+        for ep in a.get("agent_endpoints") or a.get("endpoints") or []:
             if str(ep.get("status", "enabled")).lower() == "disabled":
                 continue
             name = ep.get("name") or ""

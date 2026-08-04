@@ -77,9 +77,7 @@ def get_gcp_kms_client(kms_config: Mapping[str, Any]) -> Any:
         else service_account_json
     )
     service_account: Any = import_module("google.oauth2.service_account")
-    credentials = service_account.Credentials.from_service_account_info(
-        credentials_info
-    )
+    credentials = service_account.Credentials.from_service_account_info(credentials_info)
     return kms.KeyManagementServiceClient(credentials=credentials)
 
 

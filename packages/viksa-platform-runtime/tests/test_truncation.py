@@ -6,14 +6,7 @@ from viksa_platform.truncation import DEFAULT_SYNTHESIS_BUDGET, smart_truncate
 
 
 def _records(count: int) -> dict[str, object]:
-    return {
-        "result": {
-            "items": [
-                {"id": index, "body": "x" * 300}
-                for index in range(count)
-            ]
-        }
-    }
+    return {"result": {"items": [{"id": index, "body": "x" * 300} for index in range(count)]}}
 
 
 def test_passthrough_and_plain_string_contracts() -> None:

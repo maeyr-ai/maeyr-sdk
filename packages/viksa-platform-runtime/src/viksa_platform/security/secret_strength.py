@@ -43,11 +43,7 @@ class SecretStrengthPolicy:
         """Return true for a short, low-entropy, or placeholder-like value."""
 
         clean = value.strip()
-        tokens = frozenset(
-            token
-            for token in re.split(r"[^a-z0-9]+", clean.lower())
-            if token
-        )
+        tokens = frozenset(token for token in re.split(r"[^a-z0-9]+", clean.lower()) if token)
         return (
             len(clean) < self.minimum_length
             or not self.placeholder_tokens.isdisjoint(tokens)

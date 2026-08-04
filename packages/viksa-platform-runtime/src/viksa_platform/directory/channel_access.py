@@ -72,9 +72,7 @@ class ChannelAccessStoreBase:
         self._mongo_client = mongo_client
         self._scope = dict(scope)
         self._channel = channel
-        self._policy_collection = CHANNEL_ACCESS_COLLECTION.get(
-            channel, f"volt_{channel}_access"
-        )
+        self._policy_collection = CHANNEL_ACCESS_COLLECTION.get(channel, f"volt_{channel}_access")
         self._identity_field = CHANNEL_IDENTITY_FIELD.get(channel, "identity_value")
         self._db = database_for_account(self._scope["account_id"])
 
@@ -468,6 +466,7 @@ class ChannelAccessStoreBase:
             }
         )
         return int(result.deleted_count)
+
 
 __all__ = [
     "CHANNEL_GRANTS_COLLECTION",

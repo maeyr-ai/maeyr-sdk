@@ -99,9 +99,7 @@ def _input_parameters_schema(
             if hint:
                 desc_parts.append(hint)
             else:
-                desc_parts.append(
-                    f"Resolve via mapping_id '{mapping_id}' (see project mappings)."
-                )
+                desc_parts.append(f"Resolve via mapping_id '{mapping_id}' (see project mappings).")
         if desc_parts:
             prop["description"] = " ".join(desc_parts)
 

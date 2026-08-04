@@ -1,112 +1,121 @@
 # PyPI publishing for `viksa-sdk`
 
-The [Build and Publish to PyPI](workflows/build-and-publish.yml) workflow runs tests, builds the package with `python -m build`, checks artifacts with `twine check`, and uploads to [PyPI](https://pypi.org/project/viksa-ai/).
+This repository contains two independently versioned distributions. They must
+not share a tag namespace or release workflow.
 
-**Triggers**
+| Distribution | Source | Release tag | Workflow | Target index |
+| --- | --- | --- | --- | --- |
+| `viksa-ai` | repository root | `v<version>` | `build-and-publish.yml` | production PyPI |
+| `viksa-platform-runtime` | `packages/viksa-platform-runtime` | `platform-runtime-v<version>` | `publish-platform-runtime.yml` | production PyPI |
 
-- Push a Git tag matching `v*` (for example `v0.2.2`)
-- Publish a GitHub Release
-- Manual run: **Actions → Build and Publish to PyPI → Run workflow**
+The platform runtime's service migration gate requires the exact package on the
+index used by production builds. A local path, workspace checkout, unpinned
+version, or TestPyPI artifact is not a production substitute.
 
----
+## Platform runtime trusted publisher (required)
 
-## Option A (recommended): PyPI trusted publishing
+The dedicated [platform runtime workflow](workflows/publish-platform-runtime.yml)
+uses PyPI trusted publishing. It does not read a long-lived API token. The
+publish job has job-scoped `id-token: write` permission and is protected by the
+`pypi-platform-runtime` GitHub environment.
 
-No long-lived API token is stored in GitHub. PyPI issues a short-lived token per workflow run.
+Create a pending publisher on PyPI with these exact values before pushing the
+first release tag:
 
-### 1. Create the PyPI project (first time only)
+| PyPI field | Exact value |
+| --- | --- |
+| PyPI project name | `viksa-platform-runtime` |
+| Owner | `viksa-ai` |
+| Repository name | `viksa-sdk` |
+| Workflow name | `publish-platform-runtime.yml` |
+| Environment name | `pypi-platform-runtime` |
 
-1. Sign in at [pypi.org](https://pypi.org).
-2. Create project **`viksa-ai`** if it does not exist yet (or claim the name you use in `pyproject.toml`).
+PyPI's **Workflow name** field is the workflow filename, not the display name
+shown in GitHub Actions. A correctly configured pending publisher may create
+the project during its first trusted upload; if the project already exists,
+add the publisher under that project's publishing settings.
 
-### 2. Add a trusted publisher on PyPI
+Create the matching GitHub environment at **Settings → Environments → New
+environment → `pypi-platform-runtime`**. Required reviewers are recommended.
+Do not add `PYPI_API_TOKEN` to this environment: the runtime workflow is OIDC
+only.
 
-1. Open **Your projects → viksa-ai → Publishing**.
-2. **Add a new pending publisher** (or **Manage publishers**).
-3. Set:
+## Platform runtime release procedure
 
-   | Field | Value |
-   |--------|--------|
-   | PyPI project name | `viksa-ai` |
-   | Owner | `viksa-ai` (GitHub org or your user) |
-   | Repository name | `viksa-sdk` |
-   | Workflow name | `Build and Publish to PyPI` |
-   | Environment name | `pypi` (must match the workflow `environment: pypi`) |
+1. Change `version` in `packages/viksa-platform-runtime/pyproject.toml` and
+   regenerate `packages/viksa-platform-runtime/uv.lock`.
+2. Ensure CI passes on Python 3.10, 3.11, and 3.12. CI runs Ruff lint and format
+   checks, strict Mypy, Pytest, a clean build, Twine metadata checks, and exact
+   wheel/source-distribution verification.
+3. Tag the reviewed release commit with the exact package version:
 
-4. Save. PyPI shows the publisher as **pending** until the first successful publish from that workflow.
+   ```bash
+   git tag platform-runtime-v0.2.0
+   git push origin platform-runtime-v0.2.0
+   ```
 
-### 3. GitHub environment (optional but recommended)
+Do not use `v0.2.0` for this package. The generic `v*` namespace belongs to the
+root `viksa-ai` workflow.
 
-1. Repo **Settings → Environments → New environment** → name it `pypi`.
-2. Add protection rules if you want (required reviewers, deployment branches).
-3. You do **not** need to add `PYPI_API_TOKEN` when using trusted publishing only.
+The runtime workflow rejects a tag that does not exactly equal
+`platform-runtime-v<pyproject version>`. It builds one wheel and one source
+distribution, validates their names, versions, contents, and hashes, and passes
+only those immutable artifacts to the OIDC publish job. It intentionally does
+not use `skip-existing`; PyPI version reuse is an error. After upload, a final
+job installs the exact version from `https://pypi.org/simple` and verifies the
+installed distribution and `py.typed` marker.
 
-### 4. Release
+The absence of `repository-url` on `pypa/gh-action-pypi-publish` means the
+upload target is production PyPI. TestPyPI requires a separate workflow,
+environment, and trusted-publisher registration; never point the production
+release job at TestPyPI.
 
-**Recommended (tag-driven):**
+After the index validation job passes, rebuild each dependent service from a
+clean Docker context and verify both `viksa-platform-runtime==<version>` and
+`viksa_platform/py.typed` before releasing the service image.
+
+## Local artifact validation (does not publish)
+
+From the repository root:
 
 ```bash
-# Bump version in pyproject.toml first, then:
-git tag v0.2.2
-git push origin v0.2.2
-```
-
-**Manual dispatch:** Actions → **Build and Publish to PyPI** → **Run workflow** on `main`. After a successful publish, the workflow creates and pushes `v<version>` from `pyproject.toml` if that tag does not exist yet.
-
-Or create a GitHub Release from the tag; the workflow also runs on `release: published`.
-
----
-
-## Option B: API token secret (`PYPI_API_TOKEN`)
-
-Same pattern as [jsonQ](https://github.com/Srirammkm/jsonQ) (`secrets.PYPI_PASSWORD` / `secrets.pypi_password`). Use this if you are not using trusted publishing yet.
-
-### 1. Create a PyPI API token
-
-1. [pypi.org](https://pypi.org) → **Account settings → API tokens**.
-2. **Add API token**.
-3. Scope: **Entire account** (first upload) or **Project: viksa-ai** (after the project exists).
-4. Copy the token once (starts with `pypi-`).
-
-### 2. Add the GitHub secret
-
-1. Open `https://github.com/viksa-ai/viksa-sdk/settings/secrets/actions`.
-2. **New repository secret**:
-   - **Name:** `PYPI_API_TOKEN`
-   - **Value:** the `pypi-...` token (paste the full string)
-
-For an organization repo, you can instead use **Organization secrets** and allow access for `viksa-sdk`.
-
-### 3. Test with a dry run (local, optional)
-
-```bash
-python -m pip install build twine
+python -m pip install -e 'packages/viksa-platform-runtime[dev]'
+cd packages/viksa-platform-runtime
+ruff check src tests
+ruff format --check src tests
+mypy
+pytest
 python -m build
-twine check dist/*
-# Test upload to TestPyPI first:
-twine upload --repository testpypi dist/* -u __token__ -p YOUR_TESTPYPI_TOKEN
+python -m twine check dist/*
+python ../../scripts/verify_python_release.py \
+  --project-directory . \
+  --dist-directory dist \
+  --expected-name viksa-platform-runtime
 ```
 
-TestPyPI token secret (optional): add `TESTPYPI_API_TOKEN` and a separate workflow job if you want TestPyPI uploads.
+These commands create local artifacts only. Do not run `twine upload`, create a
+release tag, or dispatch a publishing workflow as part of validation.
 
----
+## Root `viksa-ai` release authentication
 
-## jsonQ workflow reference
+The existing [root-package workflow](workflows/build-and-publish.yml) builds
+`viksa-ai` from the repository root and currently passes
+`secrets.PYPI_API_TOKEN` to the publishing action. Configure that repository
+secret with an account-scoped token for a first upload or a `viksa-ai` project
+token once the project exists.
 
-| jsonQ file | Purpose |
-|------------|---------|
-| `build-and-publish.yaml.bkp` | Tests → `python -m build` → `twine upload` with `TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}` |
-| `release.yaml` | Matrix tests on `main` + `pypa/gh-action-pypi-publish` with `secrets.pypi_password` |
-
-This repo uses one workflow (`build-and-publish.yml`) that combines pre-release tests (like jsonQ’s `test-before-release`) and `pypa/gh-action-pypi-publish@release/v1` (like jsonQ’s `release.yaml`), with optional `PYPI_API_TOKEN` or trusted publishing.
-
----
+If the root workflow is migrated to trusted publishing later, remove its
+`password` input and register the exact workflow filename
+`build-and-publish.yml` with environment `pypi`. Merely granting
+`id-token: write` while still passing a password does not select trusted
+publishing.
 
 ## Troubleshooting
 
 | Error | Fix |
-|--------|-----|
-| `403 Invalid or non-existent authentication` | Trusted publisher owner/repo/workflow/environment must match exactly; or set `PYPI_API_TOKEN`. |
-| `File already exists` | Bump `version` in `pyproject.toml`; PyPI does not allow re-uploading the same version. |
-| Publish job skipped | Tag must match `v*`; or run workflow manually. |
-| Tests fail | Fix on `main` first; CI workflow `ci.yml` should be green. |
+| --- | --- |
+| `invalid-publisher` / OIDC `403` | Match owner, repository, workflow **filename**, and environment exactly. |
+| `File already exists` | Bump the package version. PyPI artifacts are immutable. |
+| Runtime workflow does not start | Tag must begin with `platform-runtime-v`. |
+| Exact-tag gate fails | Tag must equal `platform-runtime-v<pyproject version>`. |
+| Artifact verification fails | Remove stale `dist/`, rebuild, and inspect the reported metadata or manifest mismatch. |

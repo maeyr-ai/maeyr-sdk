@@ -61,18 +61,14 @@ def estimate_messages_tokens(messages: Sequence[Mapping[str, Any]]) -> int:
     if not messages:
         return 0
     return 3 + sum(
-        estimate_text_tokens(dict(message)) + _MESSAGE_OVERHEAD_TOKENS
-        for message in messages
+        estimate_text_tokens(dict(message)) + _MESSAGE_OVERHEAD_TOKENS for message in messages
     )
 
 
 def estimate_tools_tokens(tools: Sequence[Mapping[str, Any]]) -> int:
     """Estimate native tool schemas sent with a completion request."""
 
-    return sum(
-        estimate_text_tokens(dict(tool)) + _TOOL_OVERHEAD_TOKENS
-        for tool in (tools or [])
-    )
+    return sum(estimate_text_tokens(dict(tool)) + _TOOL_OVERHEAD_TOKENS for tool in (tools or []))
 
 
 def estimate_request_tokens(
@@ -310,9 +306,7 @@ def trim_messages_for_budget(
     with all of its corresponding tool messages.
     """
 
-    copied: List[Dict[str, Any]] = [
-        copy.deepcopy(dict(message)) for message in (messages or [])
-    ]
+    copied: List[Dict[str, Any]] = [copy.deepcopy(dict(message)) for message in (messages or [])]
     before = estimate_messages_tokens(copied)
     compacted_count = 0
 
@@ -358,11 +352,7 @@ def trim_messages_for_budget(
     for index, message in enumerate(copied):
         if message.get("role") == "user":
             latest_user_index = index
-    protected = {
-        index
-        for index, message in enumerate(copied)
-        if message.get("role") == "system"
-    }
+    protected = {index for index, message in enumerate(copied) if message.get("role") == "system"}
     if latest_user_index is not None:
         protected.add(latest_user_index)
 
@@ -389,16 +379,10 @@ def trim_messages_for_budget(
             if protected.intersection(unit):
                 continue
             removed.update(unit)
-            candidate = [
-                message
-                for index, message in enumerate(copied)
-                if index not in removed
-            ]
+            candidate = [message for index, message in enumerate(copied) if index not in removed]
             current = estimate_messages_tokens(candidate)
 
-    trimmed = [
-        message for index, message in enumerate(copied) if index not in removed
-    ]
+    trimmed = [message for index, message in enumerate(copied) if index not in removed]
     pairing_valid = tool_pairs_are_valid(trimmed)
     after = estimate_messages_tokens(trimmed)
     return TrimResult(
@@ -447,13 +431,9 @@ class BudgetConfig:
     def __post_init__(self) -> None:
         if not 1_024 <= int(self.context_window_tokens) <= 2_000_000:
             raise ValueError("context_window_tokens must be between 1024 and 2000000")
-        if not 1 <= int(self.completion_reserve_tokens) < int(
-            self.context_window_tokens
-        ):
+        if not 1 <= int(self.completion_reserve_tokens) < int(self.context_window_tokens):
             raise ValueError("completion_reserve_tokens must be below context window")
-        if not 1 <= int(self.max_tool_result_tokens) <= int(
-            self.context_window_tokens
-        ):
+        if not 1 <= int(self.max_tool_result_tokens) <= int(self.context_window_tokens):
             raise ValueError("max_tool_result_tokens is outside the context window")
         if not 1 <= int(self.max_run_tokens) <= 10_000_000:
             raise ValueError("max_run_tokens must be between 1 and 10000000")
@@ -635,8 +615,7 @@ class BudgetPolicy:
             )
 
         max_prompt_tokens = (
-            self.config.context_window_tokens
-            - self.config.completion_reserve_tokens
+            self.config.context_window_tokens - self.config.completion_reserve_tokens
         )
         tool_tokens = estimate_tools_tokens(tools)
         max_message_tokens = max_prompt_tokens - tool_tokens
@@ -689,9 +668,7 @@ class BudgetPolicy:
                 events=tuple(events),
             )
         projected_run_tokens = (
-            state.cumulative_tokens
-            + estimated
-            + self.config.completion_reserve_tokens
+            state.cumulative_tokens + estimated + self.config.completion_reserve_tokens
         )
         if projected_run_tokens > self.config.max_run_tokens:
             return BudgetDecision(

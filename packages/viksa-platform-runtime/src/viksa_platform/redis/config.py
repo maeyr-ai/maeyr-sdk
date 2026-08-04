@@ -23,9 +23,7 @@ def _value(environ: Mapping[str, str], name: str) -> str:
 
 def _is_production(environ: Mapping[str, str]) -> bool:
     environment = (
-        _value(environ, "APP_ENVIRONMENT")
-        or _value(environ, "ENVIRON")
-        or _value(environ, "ENV")
+        _value(environ, "APP_ENVIRONMENT") or _value(environ, "ENVIRON") or _value(environ, "ENV")
     )
     return environment.lower() in _PRODUCTION_NAMES
 

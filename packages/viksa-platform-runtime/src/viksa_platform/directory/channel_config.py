@@ -40,9 +40,7 @@ class ChannelSettings(BaseSettings):
     WIDGET_HISTORY_RATE_LIMIT_PER_SESSION_MINUTE: int = int(
         os.environ.get("VOLT_WIDGET_HISTORY_RATE_LIMIT_PER_SESSION_MINUTE", "20")
     )
-    WIDGET_MAX_MESSAGE_LENGTH: int = int(
-        os.environ.get("VOLT_WIDGET_MAX_MESSAGE_LENGTH", "4000")
-    )
+    WIDGET_MAX_MESSAGE_LENGTH: int = int(os.environ.get("VOLT_WIDGET_MAX_MESSAGE_LENGTH", "4000"))
     WIDGET_TRUST_PROXY_HEADERS: bool = os.environ.get(
         "VOLT_WIDGET_TRUST_PROXY_HEADERS", "false"
     ).lower() in ("1", "true", "yes")

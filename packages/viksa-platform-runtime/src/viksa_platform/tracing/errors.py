@@ -22,29 +22,21 @@ _FAILED_STATUSES = frozenset({"error", "timeout"})
 class _DisplayMessagePolicy(Protocol):
     TRACE_ERROR_REQUEST_FAILED: str
 
-    def http_exception_detail_text(
-        self, exc: BaseException, *, max_message: int = 500
-    ) -> str: ...
+    def http_exception_detail_text(self, exc: BaseException, *, max_message: int = 500) -> str: ...
 
-    def tenant_safe_trace_message(
-        self, message: str | None, *, fallback: str
-    ) -> str: ...
+    def tenant_safe_trace_message(self, message: str | None, *, fallback: str) -> str: ...
 
 
 class _SafeFallbackDisplayPolicy:
     TRACE_ERROR_REQUEST_FAILED = "Request failed"
 
     @staticmethod
-    def http_exception_detail_text(
-        exc: BaseException, *, max_message: int = 500
-    ) -> str:
+    def http_exception_detail_text(exc: BaseException, *, max_message: int = 500) -> str:
         text = str(exc) or type(exc).__name__
         return _truncate(text, max_message)
 
     @staticmethod
-    def tenant_safe_trace_message(
-        message: str | None, *, fallback: str
-    ) -> str:
+    def tenant_safe_trace_message(message: str | None, *, fallback: str) -> str:
         text = str(message or "").strip()
         return text if text == fallback else fallback
 

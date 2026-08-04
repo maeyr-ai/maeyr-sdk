@@ -38,8 +38,13 @@ dev = [
     "mypy>=1.11.0,<2",
     "pytest>=8.0.0,<9",
     "pytest-asyncio>=0.23.0,<1",
+    # Redis is an optional runtime integration, but strict type checking must
+    # resolve the deliberately lazy ``redis.asyncio`` import.
+    "redis>=5,<6",
     "ruff>=0.4.0",
     "setuptools>=77",
+    "tomli>=2; python_version < '3.11'",
+    "twine>=5,<7",
     "wheel>=0.43",
 ]
 

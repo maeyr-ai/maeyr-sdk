@@ -87,9 +87,7 @@ class TraceContext:
 
     def inject_headers(self, headers: Mapping[str, str] | None = None) -> dict[str, str]:
         result = {
-            name: value
-            for name, value in (headers or {}).items()
-            if name.lower() != "traceparent"
+            name: value for name, value in (headers or {}).items() if name.lower() != "traceparent"
         }
         result["traceparent"] = self.traceparent()
         return result

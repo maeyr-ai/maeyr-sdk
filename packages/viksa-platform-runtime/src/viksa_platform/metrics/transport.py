@@ -80,9 +80,7 @@ def _doc_from_redis(raw: Any) -> dict[str, Any]:
     doc = cast(dict[str, Any], json.loads(raw))
     if isinstance(doc.get("created_at"), str):
         try:
-            doc["created_at"] = datetime.fromisoformat(
-                doc["created_at"].replace("Z", "+00:00")
-            )
+            doc["created_at"] = datetime.fromisoformat(doc["created_at"].replace("Z", "+00:00"))
         except (ValueError, TypeError):
             doc["created_at"] = datetime.now(timezone.utc)
     return doc
@@ -203,9 +201,7 @@ async def acknowledge_events(docs: list[dict[str, Any]]) -> int:
         for doc in docs:
             raw = getattr(doc, "redis_payload", None)
             if raw is not None:
-                acknowledged += int(
-                    await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0
-                )
+                acknowledged += int(await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0)
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "token usage acknowledgement failed error_type=%s",

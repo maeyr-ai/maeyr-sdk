@@ -4,7 +4,6 @@ import hashlib
 from typing import Any
 
 import pytest
-
 from viksa_platform.directory.project_user import (
     api_inbound_customer_user_id,
     field_type_for_connector_source,

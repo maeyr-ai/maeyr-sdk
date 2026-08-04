@@ -37,8 +37,7 @@ def load_caller_allowlist(
         normalized = frozenset(
             service.strip().lower()
             for service in services
-            if isinstance(service, str)
-            and _SERVICE_NAME_RE.fullmatch(service.strip().lower())
+            if isinstance(service, str) and _SERVICE_NAME_RE.fullmatch(service.strip().lower())
         )
         if len(normalized) != len(services):
             raise RuntimeError(f"{env_name} contains an invalid service")

@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-
 from viksa_platform.security import SecretStrengthPolicy
 
 
