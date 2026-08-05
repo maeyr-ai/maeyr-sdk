@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterator
 
 import pytest
 from fastapi import Request, Response
+
 from viksa_platform.observability.performance import (
     create_request_performance_middleware,
 )

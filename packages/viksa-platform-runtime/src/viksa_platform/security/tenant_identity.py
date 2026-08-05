@@ -12,10 +12,7 @@ def canonical_tenant_id(value: object, *, field: str = "tenant_id") -> str:
     if not isinstance(value, str):
         raise ValueError(f"{field} is invalid")
     normalized = value.strip()
-    if (
-        normalized.lower() == "unknown"
-        or not _CANONICAL_TENANT_ID_RE.fullmatch(normalized)
-    ):
+    if normalized.lower() == "unknown" or not _CANONICAL_TENANT_ID_RE.fullmatch(normalized):
         raise ValueError(f"{field} is invalid")
     return normalized
 

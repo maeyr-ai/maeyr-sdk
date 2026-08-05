@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from fastapi.responses import JSONResponse
+
 from viksa_platform.compat.source_path import ensure_resolved_source_path
 from viksa_platform.directory.invoker_audit import InvokerAuditQueryStore
 from viksa_platform.health import build_mongo_readiness_endpoint

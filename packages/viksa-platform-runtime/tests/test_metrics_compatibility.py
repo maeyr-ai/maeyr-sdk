@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import pytest
 from pydantic import ValidationError
+
 from viksa_platform.metrics.constants import (
     REDIS_PROCESSING_QUEUE_KEY,
     REDIS_QUEUE_KEY,

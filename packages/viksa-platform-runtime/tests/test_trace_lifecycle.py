@@ -6,6 +6,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+
 from viksa_platform.tracing import lifecycle
 
 

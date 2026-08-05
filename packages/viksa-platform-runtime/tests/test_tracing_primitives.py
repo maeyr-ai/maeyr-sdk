@@ -6,6 +6,7 @@ from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
+
 from viksa_platform.compat.module_alias import ImportAlias, install_module_alias
 from viksa_platform.tracing import constants
 from viksa_platform.tracing.errors import (

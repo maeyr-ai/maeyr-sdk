@@ -5,6 +5,7 @@ import hashlib
 import hmac
 
 import pytest
+
 from viksa_platform.compat.internal_tenant_headers import (
     internal_tenant_headers,
     internal_tenant_headers_from_mapping,

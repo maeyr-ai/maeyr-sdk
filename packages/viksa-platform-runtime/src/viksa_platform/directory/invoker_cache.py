@@ -262,10 +262,7 @@ async def invalidate_invoker_cache(
                 await r.delete(*keys)
             if cursor == 0:
                 break
-        pattern = (
-            f"volt:project_user_identity:{account_id}:{org_id}:{project_id}:"
-            f"{channel_suffix}"
-        )
+        pattern = f"volt:project_user_identity:{account_id}:{org_id}:{project_id}:{channel_suffix}"
         cursor = 0
         while True:
             cursor, keys = await r.scan(cursor=cursor, match=pattern, count=200)

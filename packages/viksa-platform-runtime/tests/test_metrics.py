@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import pytest
+
 from viksa_platform.lifecycle import BufferConfig
 from viksa_platform.metrics import (
     BufferedMetricsRecorder,

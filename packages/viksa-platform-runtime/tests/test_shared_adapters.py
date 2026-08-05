@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from viksa_platform.aiohttp_lifecycle import close_session
 from viksa_platform.auth.sso_access import (
     extract_project_ids,

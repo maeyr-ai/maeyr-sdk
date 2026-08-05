@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from fastapi import HTTPException
+
 from viksa_platform.security import tenant_safe_display as display
 
 PUBLIC_CALLABLES = {

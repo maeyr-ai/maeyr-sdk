@@ -6,6 +6,7 @@ from importlib import import_module
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
+
 from viksa_platform.security.internal import (
     requires_internal_signature,
     sign_internal_request,
