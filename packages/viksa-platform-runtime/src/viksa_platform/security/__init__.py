@@ -16,6 +16,10 @@ from viksa_platform.security.secret_strength import (
     DEFAULT_PLACEHOLDER_TOKENS,
     SecretStrengthPolicy,
 )
+from viksa_platform.security.tenant_identity import (
+    canonical_tenant_id,
+    is_canonical_tenant_id,
+)
 
 __all__ = [
     "CallerContext",
@@ -30,4 +34,6 @@ __all__ = [
     "SigningHeaders",
     "TenantContext",
     "VerifiedCaller",
+    "canonical_tenant_id",
+    "is_canonical_tenant_id",
 ]

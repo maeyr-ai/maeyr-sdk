@@ -20,6 +20,116 @@ logger = get_logger("[viksa_platform.directory.prompt_cache]")
 _INVALIDATE_CHANNEL = "volt:prompts:invalidate"
 _redis: Any = None
 _redis_checked = False
+_VERSIONED_USER_CACHE_WRITE = """
+local current = redis.call('GET', KEYS[1])
+if current == false then
+  current = '0'
+end
+if ARGV[1] ~= '' and tostring(current) ~= ARGV[1] then
+  return 0
+end
+local envelope = cjson.encode({
+  __viksa_cache_generation = tonumber(current),
+  payload = cjson.decode(ARGV[3])
+})
+redis.call('SETEX', KEYS[2], tonumber(ARGV[2]), envelope)
+return 1
+"""
+_VERSIONED_USER_CACHE_READ = """
+local current = redis.call('GET', KEYS[1])
+if current == false then
+  current = '0'
+end
+local cached = redis.call('GET', KEYS[2])
+return {current, cached}
+"""
+_VERSIONED_SHARED_CACHE_READ_MANY = """
+local current = redis.call('GET', KEYS[1])
+if current == false then
+  current = '0'
+end
+local result = {current}
+for index = 2, #KEYS do
+  result[#result + 1] = redis.call('GET', KEYS[index])
+end
+return result
+"""
+_VERSIONED_SHARED_CACHE_WRITE_MANY = """
+local current = redis.call('GET', KEYS[1])
+if current == false then
+  current = '0'
+end
+if tostring(current) ~= ARGV[1] then
+  return 0
+end
+local ttl = tonumber(ARGV[2])
+for index = 2, #KEYS do
+  local envelope = cjson.encode({
+    __viksa_cache_generation = tonumber(current),
+    payload = cjson.decode(ARGV[index + 1])
+  })
+  redis.call('SETEX', KEYS[index], ttl, envelope)
+end
+return #KEYS - 1
+"""
+
+
+def _generation_key(account_id: str, org_id: str, project_id: str) -> str:
+    return f"volt:cache_generation:{account_id}:{org_id}:{project_id}"
+
+
+def _user_cache_key(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    email: str,
+) -> str:
+    normalized_email = (email or "").strip().lower()
+    return f"volt:user_cache:{account_id}:{org_id}:{project_id}:{normalized_email}"
+
+
+def _project_agents_cache_key(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    key_suffix: str,
+) -> str:
+    return f"volt:project_cache:{account_id}:{org_id}:{project_id}:agents:{key_suffix}"
+
+
+def _project_mapping_cache_key(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    mapping_id: str,
+) -> str:
+    return f"volt:mapping:{account_id}:{org_id}:{project_id}:{mapping_id}"
+
+
+def _decode_versioned_payload(raw: Any, generation: int) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        return None
+    stored_generation = data.get("__viksa_cache_generation")
+    payload = data.get("payload")
+    if (
+        isinstance(stored_generation, bool)
+        or not isinstance(stored_generation, int)
+        or stored_generation != generation
+        or not isinstance(payload, dict)
+    ):
+        return None
+    return payload
+
+
+def _valid_expected_generation(expected_generation: int | None) -> bool:
+    return (
+        isinstance(expected_generation, int)
+        and not isinstance(expected_generation, bool)
+        and expected_generation >= 0
+    )
 
 
 def redis_enabled() -> bool:
@@ -133,13 +243,53 @@ async def get_user_cache(
     if not r:
         return None
     try:
-        raw = await r.get(f"volt:user_cache:{account_id}:{org_id}:{project_id}:{email}")
-        if not raw:
+        pair = await r.eval(
+            _VERSIONED_USER_CACHE_READ,
+            2,
+            _generation_key(account_id, org_id, project_id),
+            _user_cache_key(account_id, org_id, project_id, email),
+        )
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
             return None
-        data = json.loads(raw)
-        return data if isinstance(data, dict) else None
+        generation_raw, cached_raw = pair
+        if cached_raw is None:
+            return None
+        generation = int(generation_raw)
+        data = json.loads(cached_raw)
+        if not isinstance(data, dict):
+            return None
+        stored_generation = data.get("__viksa_cache_generation")
+        payload = data.get("payload")
+        if (
+            isinstance(stored_generation, bool)
+            or not isinstance(stored_generation, int)
+            or stored_generation != generation
+            or not isinstance(payload, dict)
+        ):
+            return None
+        return payload
     except Exception as exc:  # noqa: BLE001
         logger.debug("user cache redis get failed: %s", exc)
+        return None
+
+
+async def get_cache_generation(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+) -> int | None:
+    """Capture the tenant generation before an authorization cache fill."""
+    r = await _client()
+    if not r:
+        return None
+    try:
+        raw = await r.get(_generation_key(account_id, org_id, project_id))
+        if raw is None:
+            return 0
+        generation = int(raw)
+        return generation if generation >= 0 else None
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("user cache generation read failed: %s", exc)
         return None
 
 
@@ -150,14 +300,20 @@ async def set_user_cache(
     email: str,
     payload: dict[str, Any],
     ttl_seconds: int = 300,
+    *,
+    expected_generation: int | None = None,
 ) -> None:
     r = await _client()
-    if not r:
+    if not r or not _valid_expected_generation(expected_generation):
         return
     try:
-        await r.setex(
-            f"volt:user_cache:{account_id}:{org_id}:{project_id}:{email}",
-            max(1, ttl_seconds),
+        await r.eval(
+            _VERSIONED_USER_CACHE_WRITE,
+            2,
+            _generation_key(account_id, org_id, project_id),
+            _user_cache_key(account_id, org_id, project_id, email),
+            str(expected_generation),
+            str(max(1, ttl_seconds)),
             json.dumps(payload),
         )
     except Exception as exc:  # noqa: BLE001
@@ -171,13 +327,16 @@ async def get_project_agents_cache(
     if not r:
         return None
     try:
-        raw = await r.get(
-            f"volt:project_cache:{account_id}:{org_id}:{project_id}:agents:{key_suffix}"
+        pair = await r.eval(
+            _VERSIONED_SHARED_CACHE_READ_MANY,
+            2,
+            _generation_key(account_id, org_id, project_id),
+            _project_agents_cache_key(account_id, org_id, project_id, key_suffix),
         )
-        if not raw:
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
             return None
-        data = json.loads(raw)
-        return data if isinstance(data, dict) else None
+        generation = int(pair[0])
+        return _decode_versioned_payload(pair[1], generation)
     except Exception as exc:  # noqa: BLE001
         logger.debug("project agents cache redis get failed: %s", exc)
         return None
@@ -190,14 +349,20 @@ async def set_project_agents_cache(
     key_suffix: str,
     payload: dict[str, Any],
     ttl_seconds: int = 86400,
+    *,
+    expected_generation: int | None = None,
 ) -> None:
     r = await _client()
-    if not r:
+    if not r or not _valid_expected_generation(expected_generation):
         return
     try:
-        await r.setex(
-            f"volt:project_cache:{account_id}:{org_id}:{project_id}:agents:{key_suffix}",
-            max(1, ttl_seconds),
+        await r.eval(
+            _VERSIONED_SHARED_CACHE_WRITE_MANY,
+            2,
+            _generation_key(account_id, org_id, project_id),
+            _project_agents_cache_key(account_id, org_id, project_id, key_suffix),
+            str(expected_generation),
+            str(max(1, ttl_seconds)),
             json.dumps(payload),
         )
     except Exception as exc:  # noqa: BLE001
@@ -214,12 +379,27 @@ async def get_project_mappings_cache(
     hits = []
     misses = []
     try:
-        keys = [f"volt:mapping:{account_id}:{org_id}:{project_id}:{mid}" for mid in mapping_ids]
-        raw_vals = await r.mget(keys)
+        keys = [
+            _project_mapping_cache_key(account_id, org_id, project_id, mid) for mid in mapping_ids
+        ]
+        raw_result = await r.eval(
+            _VERSIONED_SHARED_CACHE_READ_MANY,
+            len(keys) + 1,
+            _generation_key(account_id, org_id, project_id),
+            *keys,
+        )
+        if not isinstance(raw_result, (list, tuple)) or len(raw_result) != len(keys) + 1:
+            return [], mapping_ids
+        generation = int(raw_result[0])
+        raw_vals = raw_result[1:]
         for mid, val in zip(mapping_ids, raw_vals):
             if val:
                 try:
-                    hits.append(json.loads(val))
+                    decoded = _decode_versioned_payload(val, generation)
+                    if decoded is None:
+                        misses.append(mid)
+                    else:
+                        hits.append(decoded)
                 except Exception:  # noqa: BLE001
                     misses.append(mid)
             else:
@@ -236,19 +416,39 @@ async def set_project_mappings_cache(
     project_id: str,
     mappings: list[dict[str, Any]],
     ttl_seconds: int = 86400,
+    *,
+    expected_generation: int | None = None,
 ) -> None:
     r = await _client()
-    if not r:
+    if not r or not _valid_expected_generation(expected_generation):
         return
     try:
-        pipe = r.pipeline()
+        keys: list[str] = []
+        payloads: list[str] = []
         for m in mappings:
             mid = m.get("mapping_id") or m.get("_id")
             if not mid:
                 continue
-            key = f"volt:mapping:{account_id}:{org_id}:{project_id}:{mid}"
-            pipe.setex(key, max(1, ttl_seconds), json.dumps(m))
-        await pipe.execute()
+            keys.append(
+                _project_mapping_cache_key(
+                    account_id,
+                    org_id,
+                    project_id,
+                    str(mid),
+                )
+            )
+            payloads.append(json.dumps(m))
+        if not keys:
+            return
+        await r.eval(
+            _VERSIONED_SHARED_CACHE_WRITE_MANY,
+            len(keys) + 1,
+            _generation_key(account_id, org_id, project_id),
+            *keys,
+            str(expected_generation),
+            str(max(1, ttl_seconds)),
+            *payloads,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.debug("project mappings cache redis set failed: %s", exc)
 

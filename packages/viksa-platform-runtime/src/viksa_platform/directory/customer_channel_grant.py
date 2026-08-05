@@ -349,6 +349,7 @@ class CustomerChannelGrantOperations:
     ) -> Document:
         deleted = 0
         failed: list[Document] = []
+        cache_dirty = False
 
         if customer_user_ids is not None:
             customer_ids: list[str] = []
@@ -363,6 +364,8 @@ class CustomerChannelGrantOperations:
                 raise ValueError("customer_user_ids must contain at least one id")
             for customer_id in customer_ids:
                 try:
+                    # Deletion can partially commit before the adapter raises.
+                    cache_dirty = True
                     result = await self._dependencies.delete_customer_record(
                         scope,
                         customer_id,
@@ -379,7 +382,7 @@ class CustomerChannelGrantOperations:
                         )
                 except Exception as exc:
                     failed.append({"customer_user_id": customer_id, "error": str(exc)})
-            if deleted > 0:
+            if cache_dirty:
                 await self._dependencies.invalidate(scope)
             return {
                 "deleted": deleted,
@@ -402,6 +405,7 @@ class CustomerChannelGrantOperations:
             if not customer_id:
                 continue
             try:
+                cache_dirty = True
                 result = await self._dependencies.delete_customer_record(
                     scope,
                     customer_id,
@@ -413,7 +417,7 @@ class CustomerChannelGrantOperations:
                     failed.append({"customer_user_id": customer_id, "error": "Not deleted"})
             except Exception as exc:
                 failed.append({"customer_user_id": customer_id, "error": str(exc)})
-        if deleted > 0:
+        if cache_dirty:
             await self._dependencies.invalidate(scope)
         return {"deleted": deleted, "failed": failed, "total": len(rows)}
 
