@@ -21,7 +21,14 @@ from viksa_ai.models.agent import (
     ExecutionConfig,
     InputType,
 )
-from viksa_ai.models.auth import LoginRequest, RefreshRequest, TokenResponse
+from viksa_ai.models.auth import (
+    LoginRequest,
+    RefreshRequest,
+    TokenResponse,
+    WorkerKeyCreateRequest,
+    WorkerKeyRateLimit,
+    WorkerKeyScope,
+)
 from viksa_ai.models.executor import (
     AgentInvokeRequest,
     AgentInvokeResponse,
@@ -58,4 +65,7 @@ __all__ = [
     "LoginRequest",
     "RefreshRequest",
     "TokenResponse",
+    "WorkerKeyCreateRequest",
+    "WorkerKeyRateLimit",
+    "WorkerKeyScope",
 ]
