@@ -123,6 +123,18 @@ _RETRY_BASE_SECONDS = _bounded_float_env(
     minimum=0.0,
     maximum=2.0,
 )
+_ACK_HTTP_TIMEOUT_SECONDS = _bounded_float_env(
+    "TRACE_ACK_HTTP_TIMEOUT_SECONDS",
+    0.25,
+    minimum=0.01,
+    maximum=1.0,
+)
+_ACK_HTTP_CIRCUIT_SECONDS = _bounded_float_env(
+    "TRACE_ACK_HTTP_CIRCUIT_SECONDS",
+    5.0,
+    minimum=0.1,
+    maximum=60.0,
+)
 
 
 def _json_safe(value: Any) -> Any:
@@ -152,10 +164,13 @@ def assert_trace_producer_configuration(service: str) -> None:
 class RemoteTraceRecorder:
     __slots__ = (
         "_base_url",
+        "_ack_http_disabled_until",
+        "_ack_http_timeout_seconds",
         "_batch_spans",
         "_client",
         "_closing",
         "_drain_task",
+        "_durably_queued_spans",
         "_dropped_spans",
         "_enrich",
         "_failed_spans",
@@ -176,9 +191,15 @@ class RemoteTraceRecorder:
         max_queue_spans: int = _QUEUE_SPANS,
         batch_spans: int = _BATCH_SPANS,
         max_retries: int = _MAX_RETRIES,
+        ack_http_timeout_seconds: float = _ACK_HTTP_TIMEOUT_SECONDS,
     ) -> None:
         self.service = service
         self._base_url = (base_url or _trace_service_url()).rstrip("/")
+        self._ack_http_disabled_until = 0.0
+        self._ack_http_timeout_seconds = max(
+            0.01,
+            min(1.0, float(ack_http_timeout_seconds)),
+        )
         self._key = internal_key or _trace_internal_key()
         self._enrich = enrich
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
@@ -187,6 +208,7 @@ class RemoteTraceRecorder:
         self._drain_task: asyncio.Task[None] | None = None
         self._client: Any | None = None
         self._closing = False
+        self._durably_queued_spans = 0
         self._dropped_spans = 0
         self._failed_spans = 0
         self._sent_spans = 0
@@ -204,6 +226,10 @@ class RemoteTraceRecorder:
     @property
     def sent_spans(self) -> int:
         return self._sent_spans
+
+    @property
+    def durably_queued_spans(self) -> int:
+        return self._durably_queued_spans
 
     @property
     def delivery_stats(self) -> dict[str, int]:
@@ -386,6 +412,96 @@ class RemoteTraceRecorder:
     async def push_spans(self, spans: list[dict[str, Any]]) -> None:
         self.schedule_push(spans)
 
+    async def push_spans_acknowledged(self, spans: list[dict[str, Any]]) -> bool:
+        """Await trace-service acknowledgement for critical lifecycle events.
+
+        Redis is the primary acknowledgement boundary, so trace-service HTTP
+        latency never sits on the healthy request path. If Redis is unavailable,
+        one short circuit-broken HTTP attempt is allowed. The transport may
+        acknowledge a configured external producer outbox (for example Mongo)
+        before any process-local retry is used.
+        """
+        if not spans:
+            return True
+        self._key = _trace_internal_key() or self._key
+        if not self._key or self._closing:
+            self._dropped_spans += len(spans)
+            return False
+        safe = _serialize_spans(spans)
+        if any(not valid_span_tenant_scope(span) for span in safe):
+            self._dropped_spans += len(safe)
+            return False
+        grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+        for span in safe:
+            tenant = (
+                str(span.get("account_id") or ""),
+                str(span.get("org_id") or ""),
+                str(span.get("project_id") or ""),
+            )
+            grouped.setdefault(tenant, []).append(span)
+        acknowledged = True
+        for tenant_batch in grouped.values():
+            unresolved = await self._enqueue_durable_fallback(tenant_batch)
+            if not unresolved:
+                continue
+
+            delivered = False
+            loop = asyncio.get_running_loop()
+            if loop.time() >= self._ack_http_disabled_until:
+                try:
+                    delivered, _retryable = await asyncio.wait_for(
+                        self._post_once(unresolved),
+                        timeout=self._ack_http_timeout_seconds,
+                    )
+                except asyncio.TimeoutError:
+                    delivered = False
+                if delivered:
+                    self._ack_http_disabled_until = 0.0
+                    self._sent_spans += len(unresolved)
+                    continue
+                self._ack_http_disabled_until = loop.time() + _ACK_HTTP_CIRCUIT_SECONDS
+
+            acknowledged = False
+            self._failed_spans += len(unresolved)
+            self.schedule_push(unresolved)
+        return acknowledged
+
+    async def _enqueue_durable_fallback(
+        self,
+        spans: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Persist lifecycle events to the shared Redis trace outbox.
+
+        Returning only unresolved documents lets callers distinguish durable
+        acceptance from a process-local retry. The trace-service consumes this
+        queue idempotently by span id, so an uncertain HTTP response followed by
+        a Redis write cannot inflate the canonical trace or token totals.
+        """
+        from .transport import enqueue_span
+
+        unresolved: list[dict[str, Any]] = []
+        for span in spans:
+            if await enqueue_span(span):
+                self._durably_queued_spans += 1
+            else:
+                unresolved.append(span)
+        if len(unresolved) != len(spans):
+            logger.warning(
+                "Remote trace HTTP delivery deferred to durable outbox "
+                "service=%s queued=%s unresolved=%s",
+                self.service,
+                len(spans) - len(unresolved),
+                len(unresolved),
+            )
+        return unresolved
+
+    async def record_span_acknowledged(self, **kwargs: Any) -> bool:
+        doc = self.build_span_doc(**kwargs)
+        if not doc:
+            self._dropped_spans += 1
+            return False
+        return await self.push_spans_acknowledged([doc])
+
     @property
     def _batch_size(self) -> int:
         """Compatibility attribute for the original runtime implementation."""
@@ -540,7 +656,17 @@ class RemoteTraceRecorder:
                         if delivered:
                             self._sent_spans += len(tenant_batch)
                         else:
-                            self._failed_spans += len(tenant_batch)
+                            unresolved = await self._enqueue_durable_fallback(tenant_batch)
+                            if unresolved:
+                                # The request-local queue has exhausted its HTTP
+                                # retries. Preserve the remaining documents in
+                                # the transport's bounded dead-letter buffer so
+                                # a temporary Redis/trace outage does not turn
+                                # into an unobserved drop.
+                                from .transport import re_enqueue_spans
+
+                                await re_enqueue_spans(unresolved)
+                            self._failed_spans += len(unresolved)
                         processed += len(tenant_batch)
                 except asyncio.CancelledError:
                     dropped = len(batch) - processed

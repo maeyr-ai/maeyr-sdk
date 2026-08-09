@@ -2,7 +2,7 @@
 
 from viksa_platform.lifecycle import BoundedAsyncLifecycle, BufferConfig, RecorderStats
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "BoundedAsyncLifecycle",

@@ -33,6 +33,12 @@ jobs:
       - name: Pytest
         run: pytest --cov=viksa_ai --cov-report=term-missing
 
+      - name: Build and verify public distributions
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m build
+          python scripts/verify_public_sdk_distribution.py dist
+
   platform-runtime:
     name: Platform runtime / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest

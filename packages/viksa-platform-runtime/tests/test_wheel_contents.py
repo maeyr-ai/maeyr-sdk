@@ -31,7 +31,7 @@ def test_built_wheel_contains_typed_package_and_license(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    wheels = list(output.glob("viksa_platform_runtime-0.2.0-*.whl"))
+    wheels = list(output.glob("viksa_platform_runtime-0.2.1-*.whl"))
     assert len(wheels) == 1
 
     with zipfile.ZipFile(wheels[0]) as archive:
@@ -100,7 +100,7 @@ def test_built_wheel_contains_typed_package_and_license(tmp_path: Path) -> None:
         metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
         metadata = archive.read(metadata_name).decode("utf-8")
         assert "Name: viksa-platform-runtime\n" in metadata
-        assert "Version: 0.2.0\n" in metadata
+        assert "Version: 0.2.1\n" in metadata
         assert "License-Expression: Apache-2.0\n" in metadata
         assert "Requires-Dist: fastapi<1,>=0.104\n" in metadata
         assert "Requires-Dist: aiohttp<4,>=3.9\n" in metadata

@@ -1,8 +1,8 @@
 # Adapted from https://github.com/Srirammkm/jsonQ (.github/workflows/build-and-publish.yaml.bkp)
-# Publishes viksa-ai on release events and supports an explicit, gated
-# viksa-platform-runtime workflow dispatch. See .github/PYPI_PUBLISHING.md.
+# Publishes only the public viksa-ai SDK. The application-only platform runtime
+# is deliberately excluded from every package-registry publishing path.
 
-name: Build and Publish to PyPI
+name: Build and Publish viksa-ai to PyPI
 
 on:
   push:
@@ -11,29 +11,13 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      package:
-        description: Package to build and publish
-        required: true
-        default: viksa-ai
-        type: choice
-        options:
-          - viksa-ai
-          - viksa-platform-runtime
-      expected_version:
-        description: Exact version expected for the selected package
-        required: true
-        default: "0.2.0"
-        type: string
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   test-before-release:
     name: Pre-release tests
-    if: github.event_name != 'workflow_dispatch' || inputs.package == 'viksa-ai'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -71,7 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-before-release
     if: >
-      (github.event_name != 'workflow_dispatch' || inputs.package == 'viksa-ai') &&
       (github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'release' && github.event.action == 'published'))
@@ -94,7 +77,9 @@ jobs:
         run: python -m build
 
       - name: Check distributions
-        run: twine check dist/*
+        run: |
+          twine check dist/*
+          python scripts/verify_public_sdk_distribution.py dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -108,7 +93,7 @@ jobs:
     name: Sync git release tag
     runs-on: ubuntu-latest
     needs: build-and-publish
-    if: github.event_name == 'workflow_dispatch' && inputs.package == 'viksa-ai'
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -147,141 +132,3 @@ jobs:
           import viksa_ai
           print('Installed viksa-ai', viksa_ai.__version__ if hasattr(viksa_ai, '__version__') else VERSION)
           "
-
-  platform-runtime-build:
-    name: Test and build viksa-platform-runtime
-    if: github.event_name == 'workflow_dispatch' && inputs.package == 'viksa-platform-runtime'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/viksa-platform-runtime
-    outputs:
-      version: ${{ steps.release.outputs.version }}
-    steps:
-      - name: Checkout selected branch
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Validate distribution identity
-        id: release
-        env:
-          EXPECTED_VERSION: ${{ inputs.expected_version }}
-        run: |
-          python - <<'PY'
-          import os
-          import tomllib
-
-          with open("pyproject.toml", "rb") as project_file:
-              project = tomllib.load(project_file)["project"]
-          if project["name"] != "viksa-platform-runtime":
-              raise SystemExit(f"refusing unexpected distribution: {project['name']!r}")
-          expected_version = os.environ["EXPECTED_VERSION"]
-          if project["version"] != expected_version:
-              raise SystemExit(
-                  f"refusing unexpected version: {project['version']!r}; "
-                  f"expected {expected_version!r}"
-              )
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"version={project['version']}\n")
-          PY
-
-      - name: Install release gates
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
-          python -m pip install build twine uv
-
-      - name: Quality gates
-        run: |
-          ruff check src tests
-          ruff format --check src tests
-          mypy
-          pytest
-          uv lock --check
-
-      - name: Build immutable distributions
-        run: python -m build
-
-      - name: Verify release artifacts
-        run: |
-          python -m twine check dist/*
-          python ../../scripts/verify_python_release.py \
-            --project-directory . \
-            --dist-directory dist \
-            --expected-name viksa-platform-runtime \
-            --expected-version "${{ steps.release.outputs.version }}"
-
-      - name: Upload verified distributions
-        uses: actions/upload-artifact@v4
-        with:
-          name: viksa-platform-runtime-${{ steps.release.outputs.version }}
-          path: packages/viksa-platform-runtime/dist/
-          if-no-files-found: error
-          retention-days: 7
-
-  platform-runtime-publish:
-    name: Publish viksa-platform-runtime to PyPI
-    if: github.event_name == 'workflow_dispatch' && inputs.package == 'viksa-platform-runtime'
-    runs-on: ubuntu-latest
-    needs: platform-runtime-build
-    environment:
-      name: pypi
-      url: https://pypi.org/p/viksa-platform-runtime
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Download verified distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: viksa-platform-runtime-${{ needs.platform-runtime-build.outputs.version }}
-          path: dist
-
-      - name: Publish to production PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-  platform-runtime-validate-index:
-    name: Validate viksa-platform-runtime from PyPI
-    if: github.event_name == 'workflow_dispatch' && inputs.package == 'viksa-platform-runtime'
-    runs-on: ubuntu-latest
-    needs: [platform-runtime-build, platform-runtime-publish]
-    steps:
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install exact production release
-        run: |
-          python -m pip install --disable-pip-version-check \
-            --index-url https://pypi.org/simple \
-            --no-cache-dir \
-            "viksa-platform-runtime==${{ needs.platform-runtime-build.outputs.version }}"
-
-      - name: Verify installed package
-        env:
-          EXPECTED_VERSION: ${{ needs.platform-runtime-build.outputs.version }}
-        run: |
-          python - <<'PY'
-          import importlib.metadata
-          import os
-          from pathlib import Path
-
-          import viksa_platform
-
-          expected = os.environ["EXPECTED_VERSION"]
-          installed = importlib.metadata.version("viksa-platform-runtime")
-          marker = Path(viksa_platform.__file__).with_name("py.typed")
-          if installed != expected:
-              raise SystemExit(f"installed {installed!r}; expected {expected!r}")
-          if not marker.is_file():
-              raise SystemExit(f"missing PEP 561 marker: {marker}")
-          print(f"validated viksa-platform-runtime=={installed} from production PyPI")
-          PY

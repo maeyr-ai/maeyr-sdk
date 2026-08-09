@@ -1,6 +1,6 @@
 # Migration map from copied `common/` modules
 
-Version `0.2.0` consolidates contracts, bounded mechanics, and the universally
+Version `0.2.1` consolidates contracts, bounded mechanics, and the universally
 shared pure tracing primitives,
 not every service-specific implementation. The mappings below let a service
 move imports without copying legacy source into this distribution.
@@ -71,18 +71,29 @@ owning route authorization.
 | `DEFAULT_SYNTHESIS_BUDGET`, `smart_truncate` | Same names and behavior in `viksa_platform.truncation` |
 | service-specific token budgets and orchestration policy | Remain application-owned and pass an explicit `max_chars` value |
 
-## Required release gate for service aliases
+## Required private-source gate for service aliases
 
-`viksa-platform-runtime==0.2.0` must be published to the Python package index
-used by every service build before any service alias or requirement pin is
-merged or deployed. Until that release exists, production image builds are
-intentionally blocked: they must not fall back to an unpinned version, a local
-workspace path, or a copied implementation. Local validation may use the exact
-`0.2.0` wheel or this package's source tree only.
+`viksa-platform-runtime` is internal application infrastructure and must never
+be published to or downloaded from public PyPI. Every service build receives a
+reviewed `viksa-sdk` commit through the named BuildKit context
+`viksa_platform_runtime`. The Dockerfile installs that source first with
+`--no-index --no-build-isolation --no-deps`, then installs the service's public
+requirements and the same local source under a direct-reference constraint.
+This second pass resolves declared third-party dependencies while preventing a
+same-named public distribution from entering the environment. `pip check` must
+then pass. Service requirements and dependency tables must not name the
+internal distribution.
 
-After publication, rebuild each service from a clean Docker context and verify
-both the installed distribution version and the `viksa_platform/py.typed`
-marker before releasing the service image.
+CI and release automation must resolve the private repository using a
+least-privilege read token, pin the checkout to a full commit SHA, verify that
+the checked-out `HEAD` equals the requested SHA, and pass only
+`packages/viksa-platform-runtime` as the named build context. Production builds
+from a developer checkout additionally require the runtime subtree to be
+committed and clean.
+
+Before releasing a service image, verify the installed distribution version and
+the `viksa_platform/py.typed` marker. Building a wheel is permitted for internal
+validation, but uploading it to a public package registry is prohibited.
 
 ## Safe removal gate
 

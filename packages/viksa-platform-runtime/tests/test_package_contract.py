@@ -6,5 +6,5 @@ import viksa_platform
 
 
 def test_version_and_pep561_marker_are_packaged() -> None:
-    assert viksa_platform.__version__ == "0.2.0"
+    assert viksa_platform.__version__ == "0.2.1"
     assert files("viksa_platform").joinpath("py.typed").is_file()

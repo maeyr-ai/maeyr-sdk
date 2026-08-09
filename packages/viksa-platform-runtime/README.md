@@ -1,7 +1,7 @@
 # viksa-platform-runtime
 
 `viksa-platform-runtime` is the independently versioned, PEP 561-typed boundary
-for cross-cutting Viksa service behavior. Version `0.2.0` provides:
+for cross-cutting Viksa service behavior. Version `0.2.1` provides:
 
 - instance-based, bounded trace and usage recorders;
 - typed trace, usage, tenant, and caller contexts;
@@ -12,7 +12,7 @@ for cross-cutting Viksa service behavior. Version `0.2.0` provides:
 - structure-aware truncation for bounded LLM context payloads; and
 - thin functional facades for staged migration from copied `common/` modules.
 
-Version `0.2.0` also owns the stable tracing primitives historically copied as
+Version `0.2.1` also owns the stable tracing primitives historically copied as
 `common.platform_traces.ids`, `tracestate`, `tenant`, `sampling`, `constants`,
 `errors`, `labels`, `semconv`, `workflow`, and `internal_headers`. Those legacy
 module paths may be retained as identity-preserving import-only aliases.
@@ -33,11 +33,16 @@ Shared structured-payload truncation should import
 items, emits an explicit downsampling note, and retains the historical
 `DEFAULT_SYNTHESIS_BUDGET` contract.
 
-The fleet migration has a hard release dependency: version `0.2.0` must exist
-in the package index used by production builds before any service-side alias or
-requirement pin is merged or deployed. Local source and wheel installs are for
-validation only; production builds must never substitute an unpinned package
-or workspace path. See the release gate in [`MIGRATION.md`](MIGRATION.md).
+This package is private application infrastructure. It must never be published
+to or resolved from public PyPI. Service images receive a reviewed SDK commit as
+the named BuildKit context `viksa_platform_runtime` and install this source with
+`--no-index --no-build-isolation --no-deps` before installing their public
+requirements and this same local source in one constrained resolver pass.
+That pass installs the runtime's declared third-party dependencies without
+allowing a same-named public package to substitute for the private source, and
+`pip check` rejects an incomplete or incompatible environment. CI and release
+automation must pin that private checkout to a full commit SHA. See the source
+gate in [`MIGRATION.md`](MIGRATION.md).
 
 The instance APIs are canonical. Functional `configure_*`, `start_*`,
 `record_*`, and `stop_*` helpers hold process-global state only to support a
@@ -77,6 +82,9 @@ python ../../scripts/verify_python_release.py \
   --dist-directory dist \
   --expected-name viksa-platform-runtime
 ```
+
+Building and checking a wheel is an internal validation step; it does not
+authorize uploading this distribution to any public package registry.
 
 The distribution supports Python 3.10–3.12.
 

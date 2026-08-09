@@ -597,7 +597,7 @@ async def _flush_loop() -> None:
 async def _flush() -> None:
     if not _flush_handler:
         return
-    from .transport import drain_queue
+    from .transport import acknowledge_spans, drain_queue, release_spans
 
     batch: List[Dict[str, Any]] = await drain_queue(_BATCH_SIZE)
     while _memory_queue and len(batch) < _BATCH_SIZE * 2:
@@ -606,9 +606,12 @@ async def _flush() -> None:
         return
     try:
         await _flush_handler(batch)
+        await acknowledge_spans(batch)
     except Exception:
         logger.exception("platform_traces flush failed (%d docs); re-enqueueing", len(batch))
-        await re_enqueue_spans(batch)
+        unresolved = await release_spans(batch)
+        if unresolved:
+            await re_enqueue_spans(unresolved)
 
 
 def get_recorder_stats() -> Dict[str, Any]:

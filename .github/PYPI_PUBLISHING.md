@@ -1,82 +1,49 @@
-# PyPI publishing for `viksa-sdk`
+# Package publishing policy
 
-This repository contains two independently versioned distributions. They must
-not share a tag namespace or release workflow.
+This repository contains one public distribution and one private application
+component. They have deliberately different delivery paths.
 
-| Distribution | Source | Release tag | Workflow | Target index |
-| --- | --- | --- | --- | --- |
-| `viksa-ai` | repository root | `v<version>` | `build-and-publish.yml` | production PyPI |
-| `viksa-platform-runtime` | `packages/viksa-platform-runtime` | `platform-runtime-v<version>` | `publish-platform-runtime.yml` | production PyPI |
+| Distribution | Visibility | Delivery |
+| --- | --- | --- |
+| `viksa-ai` | Public SDK | `build-and-publish.yml` publishes tagged releases to PyPI |
+| `viksa-platform-runtime` | Internal only | A reviewed private-repository commit is passed directly to service image builds |
 
-The platform runtime's service migration gate requires the exact package on the
-index used by production builds. A local path, workspace checkout, unpinned
-version, or TestPyPI artifact is not a production substitute.
+## Internal platform runtime
 
-## Platform runtime trusted publisher (required)
+`packages/viksa-platform-runtime` must never be uploaded to PyPI, TestPyPI, or
+another public package registry. There is no runtime publishing workflow or
+runtime release tag. Building its wheel and source distribution remains useful
+for CI validation, but those artifacts stay inside the workflow that built them.
 
-The dedicated [platform runtime workflow](workflows/publish-platform-runtime.yml)
-uses PyPI trusted publishing. It does not read a long-lived API token. The
-publish job has job-scoped `id-token: write` permission and is protected by the
-`pypi-platform-runtime` GitHub environment.
+Service CI checks out this private repository using the least-privilege
+`VIKSA_SDK_READ_TOKEN`, verifies a full commit SHA, and supplies
+`packages/viksa-platform-runtime` as the named BuildKit context
+`viksa_platform_runtime`. The service Dockerfile installs it with:
 
-Create a pending publisher on PyPI with these exact values before pushing the
-first release tag:
+```text
+pip install --no-index --no-build-isolation --no-deps /tmp/viksa-platform-runtime
+pip install --no-build-isolation --constraint /tmp/viksa-platform-runtime.constraints -r requirements.txt /tmp/viksa-platform-runtime
+pip check
+```
 
-| PyPI field | Exact value |
-| --- | --- |
-| PyPI project name | `viksa-platform-runtime` |
-| Owner | `viksa-ai` |
-| Repository name | `viksa-sdk` |
-| Workflow name | `publish-platform-runtime.yml` |
-| Environment name | `pypi-platform-runtime` |
+Public service requirement files and dependency tables must not contain
+`viksa-platform-runtime`. This separation prevents pip from consulting a public
+index for an internal application component and prevents dependency confusion.
+The constrained second pass may resolve the runtime's ordinary third-party
+dependencies from the approved public index, but it must resolve the runtime
+distribution itself only from the private local source. `pip check` makes
+missing or incompatible transitive dependencies a build failure.
+Workspace development uses
+`devops/scripts/install_internal_service_dependencies.py`, which applies the
+same local-source constraint while installing service requirements.
 
-PyPI's **Workflow name** field is the workflow filename, not the display name
-shown in GitHub Actions. A correctly configured pending publisher may create
-the project during its first trusted upload; if the project already exists,
-add the publisher under that project's publishing settings.
+## Public `viksa-ai` releases
 
-Create the matching GitHub environment at **Settings → Environments → New
-environment → `pypi-platform-runtime`**. Required reviewers are recommended.
-Do not add `PYPI_API_TOKEN` to this environment: the runtime workflow is OIDC
-only.
+The root [build-and-publish workflow](workflows/build-and-publish.yml) builds the
+public `viksa-ai` distribution from the repository root. Its `v<version>` tags,
+PyPI credentials, and post-release index checks apply only to `viksa-ai`.
 
-## Platform runtime release procedure
-
-1. Change `version` in `packages/viksa-platform-runtime/pyproject.toml` and
-   regenerate `packages/viksa-platform-runtime/uv.lock`.
-2. Ensure CI passes on Python 3.10, 3.11, and 3.12. CI runs Ruff lint and format
-   checks, strict Mypy, Pytest, a clean build, Twine metadata checks, and exact
-   wheel/source-distribution verification.
-3. Tag the reviewed release commit with the exact package version:
-
-   ```bash
-   git tag platform-runtime-v0.2.0
-   git push origin platform-runtime-v0.2.0
-   ```
-
-Do not use `v0.2.0` for this package. The generic `v*` namespace belongs to the
-root `viksa-ai` workflow.
-
-The runtime workflow rejects a tag that does not exactly equal
-`platform-runtime-v<pyproject version>`. It builds one wheel and one source
-distribution, validates their names, versions, contents, and hashes, and passes
-only those immutable artifacts to the OIDC publish job. It intentionally does
-not use `skip-existing`; PyPI version reuse is an error. After upload, a final
-job installs the exact version from `https://pypi.org/simple` and verifies the
-installed distribution and `py.typed` marker.
-
-The absence of `repository-url` on `pypa/gh-action-pypi-publish` means the
-upload target is production PyPI. TestPyPI requires a separate workflow,
-environment, and trusted-publisher registration; never point the production
-release job at TestPyPI.
-
-After the index validation job passes, rebuild each dependent service from a
-clean Docker context and verify both `viksa-platform-runtime==<version>` and
-`viksa_platform/py.typed` before releasing the service image.
-
-## Local artifact validation (does not publish)
-
-From the repository root:
+Local runtime validation is still supported:
 
 ```bash
 python -m pip install -e 'packages/viksa-platform-runtime[dev]'
@@ -87,35 +54,6 @@ mypy
 pytest
 python -m build
 python -m twine check dist/*
-python ../../scripts/verify_python_release.py \
-  --project-directory . \
-  --dist-directory dist \
-  --expected-name viksa-platform-runtime
 ```
 
-These commands create local artifacts only. Do not run `twine upload`, create a
-release tag, or dispatch a publishing workflow as part of validation.
-
-## Root `viksa-ai` release authentication
-
-The existing [root-package workflow](workflows/build-and-publish.yml) builds
-`viksa-ai` from the repository root and currently passes
-`secrets.PYPI_API_TOKEN` to the publishing action. Configure that repository
-secret with an account-scoped token for a first upload or a `viksa-ai` project
-token once the project exists.
-
-If the root workflow is migrated to trusted publishing later, remove its
-`password` input and register the exact workflow filename
-`build-and-publish.yml` with environment `pypi`. Merely granting
-`id-token: write` while still passing a password does not select trusted
-publishing.
-
-## Troubleshooting
-
-| Error | Fix |
-| --- | --- |
-| `invalid-publisher` / OIDC `403` | Match owner, repository, workflow **filename**, and environment exactly. |
-| `File already exists` | Bump the package version. PyPI artifacts are immutable. |
-| Runtime workflow does not start | Tag must begin with `platform-runtime-v`. |
-| Exact-tag gate fails | Tag must equal `platform-runtime-v<pyproject version>`. |
-| Artifact verification fails | Remove stale `dist/`, rebuild, and inspect the reported metadata or manifest mismatch. |
+These commands do not authorize `twine upload` or any registry publication.

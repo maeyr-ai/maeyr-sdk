@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "viksa-platform-runtime"
-version = "0.2.0"
+version = "0.2.1"
 description = "Typed cross-cutting runtime contracts for Viksa platform services"
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,6 +12,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Viksa AI", email = "support@viksaai.com" }]
 classifiers = [
+    "Private :: Do Not Upload",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
