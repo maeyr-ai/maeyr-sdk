@@ -3,9 +3,198 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable, MutableMapping
+import os
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, MutableMapping
 from contextlib import asynccontextmanager
 from typing import Any
+from urllib.parse import parse_qsl, quote_plus, urlsplit
+
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+_MONGO_SCHEMES = frozenset({"mongodb", "mongodb+srv"})
+
+
+def _environment_value(environment: Mapping[str, str], *names: str) -> str | None:
+    for name in names:
+        value = environment.get(name)
+        if value is not None and value.strip():
+            return value.strip()
+    return None
+
+
+def _environment_boolean(
+    environment: Mapping[str, str],
+    name: str,
+    *,
+    default: bool = False,
+) -> bool:
+    value = environment.get(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in _TRUE_VALUES:
+        return True
+    if normalized in _FALSE_VALUES:
+        return False
+    raise ValueError(f"{name} must be a boolean value")
+
+
+def _validate_mongo_uri(uri: str) -> None:
+    if any(character.isspace() for character in uri):
+        raise ValueError("MONGODB_URI must not contain whitespace")
+    parsed = urlsplit(uri)
+    if (
+        parsed.scheme.lower() not in _MONGO_SCHEMES
+        or not parsed.netloc
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "MONGODB_URI must be a complete mongodb:// or mongodb+srv:// URI"
+        )
+
+
+def _append_uri_options(uri: str, options: list[tuple[str, str]]) -> str:
+    if not options:
+        return uri
+    parsed = urlsplit(uri)
+    existing = {name.lower() for name, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+    additions = [
+        f"{quote_plus(name)}={quote_plus(value)}"
+        for name, value in options
+        if name.lower() not in existing
+    ]
+    if not additions:
+        return uri
+    if "?" not in uri:
+        separator = "?"
+    elif uri.endswith(("?", "&")):
+        separator = ""
+    else:
+        separator = "&"
+    return f"{uri}{separator}{'&'.join(additions)}"
+
+
+def _mongo_tls_options(environment: Mapping[str, str]) -> list[tuple[str, str]]:
+    ca_file = _environment_value(environment, "MONGO_TLS_CA_FILE")
+    certificate_file = _environment_value(environment, "MONGO_TLS_CERT_FILE")
+    key_file = _environment_value(environment, "MONGO_TLS_KEY_FILE")
+    if key_file and key_file != certificate_file:
+        raise ValueError(
+            "MONGO_TLS_CERT_FILE must reference a combined certificate/key PEM; "
+            "a separate MONGO_TLS_KEY_FILE is not supported by PyMongo"
+        )
+    allow_invalid = _environment_boolean(
+        environment, "MONGO_TLS_ALLOW_INVALID_CERTIFICATES"
+    )
+    production = (environment.get("APP_ENVIRONMENT") or "").strip().lower() in {
+        "prod",
+        "production",
+    }
+    if allow_invalid and production:
+        raise ValueError(
+            "MONGO_TLS_ALLOW_INVALID_CERTIFICATES is forbidden in production"
+        )
+    tls_enabled = _environment_boolean(environment, "MONGO_TLS_ENABLED")
+    tls_enabled = tls_enabled or bool(ca_file or certificate_file or allow_invalid)
+    if not tls_enabled:
+        return []
+    options = [("tls", "true")]
+    if ca_file:
+        options.append(("tlsCAFile", ca_file))
+    if certificate_file:
+        options.append(("tlsCertificateKeyFile", certificate_file))
+    if allow_invalid:
+        options.append(("tlsAllowInvalidCertificates", "true"))
+    return options
+
+
+def mongo_connection_uri(environment: Mapping[str, str] | None = None) -> str:
+    """Resolve the provider-neutral Mongo connection contract.
+
+    ``MONGODB_URI`` is authoritative and remains intact, including its database,
+    SRV record, replica-set, authentication, and Atlas options.  The existing
+    decomposed ``MONGO_*`` variables remain a compatibility input.  Optional
+    mounted CA and combined client certificate/key PEM files are added as URI
+    options so every Motor/PyMongo call site receives the same TLS behavior.
+    """
+
+    values: Mapping[str, str] = os.environ if environment is None else environment
+    explicit_uri = _environment_value(values, "MONGODB_URI", "MONGO_URI")
+    tls_options = _mongo_tls_options(values)
+    if explicit_uri:
+        _validate_mongo_uri(explicit_uri)
+        return _append_uri_options(explicit_uri, tls_options)
+
+    host = _environment_value(values, "MONGO_HOST")
+    if not host:
+        raise ValueError(
+            "MongoDB is not configured; set MONGODB_URI or MONGO_HOST"
+        )
+    if (
+        "://" in host
+        or any(character.isspace() for character in host)
+        or any(character in host for character in "/?#")
+    ):
+        raise ValueError("MONGO_HOST must contain host names and ports only")
+
+    username = _environment_value(values, "MONGO_USERNAME", "MONGODB_USER")
+    password = _environment_value(values, "MONGO_PASSWORD", "MONGODB_PASS")
+    if bool(username) != bool(password):
+        raise ValueError(
+            "MONGO_USERNAME and MONGO_PASSWORD must either both be set or both be absent"
+        )
+    credentials = ""
+    if username and password:
+        credentials = f"{quote_plus(username)}:{quote_plus(password)}@"
+
+    srv = _environment_boolean(values, "MONGO_SRV")
+    scheme = "mongodb+srv" if srv else "mongodb"
+    options: list[tuple[str, str]] = [
+        ("retryWrites", "true"),
+        ("w", "majority"),
+    ]
+    optional_parameters = (
+        ("replicaSet", "MONGO_REPLICA_SET"),
+        ("authSource", "MONGO_AUTH_SOURCE"),
+        ("authMechanism", "MONGO_AUTH_MECHANISM"),
+        ("appName", "MONGO_APP_NAME"),
+        ("readConcernLevel", "MONGO_READ_CONCERN_LEVEL"),
+    )
+    for parameter, variable in optional_parameters:
+        value = _environment_value(values, variable)
+        if value:
+            options.append((parameter, value))
+    if _environment_boolean(values, "MONGO_WRITE_CONCERN_J"):
+        options.append(("journal", "true"))
+    options.extend(tls_options)
+    uri = f"{scheme}://{credentials}{host}/"
+    resolved = _append_uri_options(uri, options)
+    _validate_mongo_uri(resolved)
+    return resolved
+
+
+def redact_mongo_uri(uri: str) -> str:
+    """Return a diagnostic-safe Mongo URI without credentials or secret options."""
+
+    try:
+        parsed = urlsplit(uri)
+    except ValueError:
+        return "<invalid-mongodb-uri>"
+    if parsed.scheme.lower() not in _MONGO_SCHEMES or not parsed.netloc:
+        return "<invalid-mongodb-uri>"
+    authority = parsed.netloc
+    if "@" in authority:
+        authority = f"<credentials-redacted>@{authority.rsplit('@', 1)[-1]}"
+    redacted_options: list[str] = []
+    for name, value in parse_qsl(parsed.query, keep_blank_values=True):
+        normalized = name.lower()
+        if normalized == "authmechanismproperties" or any(
+            token in normalized for token in ("password", "secret", "token")
+        ):
+            value = "<redacted>"
+        redacted_options.append(f"{quote_plus(name)}={quote_plus(value)}")
+    suffix = f"?{'&'.join(redacted_options)}" if redacted_options else ""
+    return f"{parsed.scheme}://{authority}{parsed.path}{suffix}"
 
 
 def require_mongo_client(client: Any | None) -> Any:
@@ -136,8 +325,10 @@ __all__ = [
     "cached_mongo_database",
     "connection_usage_log",
     "log_mongo_connection_status",
+    "mongo_connection_uri",
     "mongo_collection",
     "optimize_projection",
+    "redact_mongo_uri",
     "require_mongo_client",
     "resilient_mongo_database",
     "warm_mongo_connection_pool",
