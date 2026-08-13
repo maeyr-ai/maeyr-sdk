@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, cast
 
 _DEFAULT_MAX_STRING = 2000
@@ -54,14 +53,14 @@ TRACE_TASK_UNKNOWN = "Unknown error"
 TRACE_AGENT_NOT_FOUND = "Agent not found"
 TRACE_MAX_RETRIES = "Max retries exceeded for this task. Moving on."
 
-# Server-only chat metadata used during the plaintext-to-sealed migration.
-CHAT_INTERNAL_RESUME_STATE_KEY = "_resume_state"
 CHAT_INTERNAL_RESUME_STATE_SEALED_KEY = "_resume_state_sealed"
 RESUME_STATE_SEALED_KEY = "resume_state_sealed"
 RESUME_STATE_PUBLIC_KEY = "resume_state_public"
 _PRIVATE_RESUME_STATE_KEYS = frozenset(
     {
-        CHAT_INTERNAL_RESUME_STATE_KEY,
+        # Reject plaintext resume blobs even though they are no longer a
+        # supported persistence format.
+        "_resume_state",
         CHAT_INTERNAL_RESUME_STATE_SEALED_KEY,
         "_resume_state_claim",
         "resume_state",
@@ -317,61 +316,6 @@ def redact_condition_detail_rows(details: Optional[List[Any]]) -> List[Any]:
     return out
 
 
-def _redact_harness_messages(messages: Any) -> Any:
-    """Return a tenant-safe copy of a harness message thread."""
-    if not isinstance(messages, list):
-        return messages
-    out = []
-    for message in messages:
-        if not isinstance(message, dict):
-            out.append(message)
-            continue
-
-        item = dict(message)
-        role = item.get("role")
-        if role == "tool":
-            item["content"] = "[redacted]"
-        elif role == "assistant":
-            if item.get("content") is not None:
-                item["content"] = "[redacted]"
-
-            tool_calls = item.get("tool_calls")
-            if isinstance(tool_calls, list):
-                redacted_calls = []
-                for tool_call in tool_calls:
-                    if not isinstance(tool_call, dict):
-                        redacted_calls.append(tool_call)
-                        continue
-                    call = dict(tool_call)
-                    function = call.get("function")
-                    if isinstance(function, dict):
-                        function = dict(function)
-                        if "arguments" in function:
-                            function["arguments"] = "[redacted]"
-                        call["function"] = function
-                    redacted_calls.append(call)
-                item["tool_calls"] = redacted_calls
-
-            function_call = item.get("function_call")
-            if isinstance(function_call, dict):
-                function_call = dict(function_call)
-                if "arguments" in function_call:
-                    function_call["arguments"] = "[redacted]"
-                item["function_call"] = function_call
-        out.append(item)
-    return out
-
-
-def _redact_pending_approval_inputs(approvals: Any) -> Any:
-    """Return tenant-safe copies of serialized harness approvals."""
-    if not isinstance(approvals, list):
-        return approvals
-    return [
-        redact_sensitive_structure(approval) if isinstance(approval, dict) else approval
-        for approval in approvals
-    ]
-
-
 def strip_resume_state_secrets(value: Any) -> Any:
     """Recursively remove raw and sealed resume state while retaining public projections."""
     if isinstance(value, dict):
@@ -444,14 +388,6 @@ def project_resume_state_public(
             out["pending_count"] = len(public_approvals)
             out["kind"] = "approval"
 
-    legacy_approval = resume_state.get("harness_pending_approval")
-    if isinstance(legacy_approval, dict) and "harness_pending_approvals" not in out:
-        projected = _public_pending_approval(legacy_approval)
-        if projected:
-            out["harness_pending_approvals"] = [projected]
-            out["pending_count"] = 1
-            out["kind"] = "approval"
-
     return cast(Dict[str, Any], strip_resume_state_secrets(out))
 
 
@@ -459,49 +395,6 @@ def sanitize_resume_event_payload(value: Any) -> Any:
     """Prepare nested event/approval payloads without raw or sealed resume state."""
     stripped = strip_resume_state_secrets(value)
     return sanitize_execution_persisted_blob(stripped)
-
-
-def redact_resume_state_for_storage(
-    resume_state: Optional[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """
-    Prepare complete server-only pause state for persistence.
-
-    The historical function name is retained for callers. Resume state stored by
-    triggers and schedules is read back verbatim by the harness, so redacting
-    messages, approval inputs, or active agent definitions here would corrupt
-    continuation. Tenant/client read paths must use
-    :func:`redact_resume_state_for_tenant_view`.
-    """
-    if not resume_state:
-        return {}
-    return dict(resume_state)
-
-
-def redact_resume_state_for_tenant_view(
-    resume_state: Optional[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Full tenant-safe resume_state (includes pending approval inputs)."""
-    if not resume_state:
-        return {}
-    out = dict(resume_state)
-    if "task_outputs" in out:
-        out["task_outputs"] = redact_sensitive_structure(out.get("task_outputs"))
-    if "harness_messages" in out:
-        out["harness_messages"] = _redact_harness_messages(out.get("harness_messages"))
-    if "harness_active_agents" in out:
-        out["harness_active_agents"] = redact_sensitive_structure(out.get("harness_active_agents"))
-    if "harness_pending_approvals" in out:
-        out["harness_pending_approvals"] = _redact_pending_approval_inputs(
-            out.get("harness_pending_approvals")
-        )
-    legacy_pending = out.get("harness_pending_approval")
-    if isinstance(legacy_pending, dict):
-        out["harness_pending_approval"] = redact_sensitive_structure(legacy_pending)
-    pending = out.get("pending_endpoint_approval")
-    if isinstance(pending, dict):
-        out["pending_endpoint_approval"] = redact_sensitive_structure(pending)
-    return out
 
 
 def sanitize_execution_persisted_blob(value: Any) -> Any:
@@ -530,7 +423,7 @@ def sanitize_execution_document_for_tenant(
     out = dict(execution)
     out.pop(RESUME_STATE_SEALED_KEY, None)
     out.pop(CHAT_INTERNAL_RESUME_STATE_SEALED_KEY, None)
-    out.pop(CHAT_INTERNAL_RESUME_STATE_KEY, None)
+    out.pop("_resume_state", None)
     for key in ("webhook_payload", "final_results", "task_outputs"):
         if key in out and out[key] is not None:
             out[key] = sanitize_execution_persisted_blob(out[key])
@@ -617,52 +510,6 @@ def chat_message_metadata_for_client(
     if isinstance(log, list):
         out["execution_log"] = [_strip_server_only_execution_log_row(row) for row in log]
     return out
-
-
-@dataclass(frozen=True)
-class PauseResumeScanResult:
-    """Server-side pause detection from recent assistant messages."""
-
-    resume_state: Optional[Dict[str, Any]] = None
-    trace_state: Optional[Dict[str, Any]] = None
-
-
-def resolve_pause_resume_from_messages(
-    recent_messages: List[Dict[str, Any]],
-) -> PauseResumeScanResult:
-    """
-    Find resume_state for a continued turn.
-
-    Prefers ``_resume_state`` (full blob). Legacy ``execution_log`` rows work for
-    ``awaiting_input`` only; approval pause without the internal blob is ignored
-    (deploy note: pre-migration approval pauses cannot resume from redacted logs).
-    """
-    trace_state: Optional[Dict[str, Any]] = None
-    for msg in reversed(recent_messages):
-        if msg.get("role") != "assistant" or not msg.get("metadata"):
-            continue
-        meta = msg.get("metadata") or {}
-        if meta.get("trace_state"):
-            trace_state = meta.get("trace_state")
-        internal_resume = meta.get(CHAT_INTERNAL_RESUME_STATE_KEY)
-        if internal_resume:
-            return PauseResumeScanResult(
-                resume_state=internal_resume,
-                trace_state=trace_state or meta.get("trace_state"),
-            )
-        for entry in meta.get("execution_log", []):
-            if entry.get("event") != "execution_summary":
-                continue
-            data = entry.get("data", {})
-            if not (data.get("awaiting_input") or data.get("awaiting_approval")):
-                continue
-            if data.get("awaiting_approval"):
-                continue
-            return PauseResumeScanResult(
-                resume_state=data.get("resume_state"),
-                trace_state=trace_state or meta.get("trace_state"),
-            )
-    return PauseResumeScanResult(resume_state=None, trace_state=trace_state)
 
 
 def sanitize_message_metadata_for_llm(

@@ -17,10 +17,7 @@ PUBLIC_CALLABLES = {
     "public_http_detail",
     "redact_condition_detail_rows",
     "redact_inline_secrets_in_text",
-    "redact_resume_state_for_storage",
-    "redact_resume_state_for_tenant_view",
     "redact_sensitive_structure",
-    "resolve_pause_resume_from_messages",
     "sanitize_approval_document_for_tenant",
     "sanitize_chat_message_for_tenant",
     "sanitize_chat_message_metadata_for_tenant",
@@ -49,7 +46,6 @@ PUBLIC_CALLABLES = {
 }
 
 PUBLIC_CONSTANTS = {
-    "CHAT_INTERNAL_RESUME_STATE_KEY",
     "CHAT_INTERNAL_RESUME_STATE_SEALED_KEY",
     "RESUME_STATE_PUBLIC_KEY",
     "RESUME_STATE_SEALED_KEY",
@@ -63,6 +59,14 @@ PUBLIC_CONSTANTS = {
     "TRACE_TASK_FAILED",
     "TRACE_TASK_TIMED_OUT",
     "TRACE_TASK_UNKNOWN",
+}
+
+RETIRED_PLAINTEXT_RESUME_NAMES = {
+    "CHAT_INTERNAL_RESUME_STATE_KEY",
+    "PauseResumeScanResult",
+    "redact_resume_state_for_storage",
+    "redact_resume_state_for_tenant_view",
+    "resolve_pause_resume_from_messages",
 }
 
 
@@ -109,17 +113,17 @@ def _resume_state() -> dict[str, Any]:
                 "execution_config": {"access_token": "config-secret"},
             }
         ],
-        "harness_pending_approval": {"inputs": {"amount": 20, "api_key": "legacy-approval-secret"}},
         "pending_endpoint_approval": {"inputs": {"amount": 30, "secret": "endpoint-secret"}},
     }
 
 
-def test_public_contract_preserves_every_callable_dataclass_and_constant() -> None:
+def test_public_contract_contains_only_current_resume_state_apis() -> None:
     for name in PUBLIC_CALLABLES:
         assert callable(getattr(display, name))
-    assert display.PauseResumeScanResult.__dataclass_fields__
     for name in PUBLIC_CONSTANTS:
         assert isinstance(getattr(display, name), str)
+    for name in RETIRED_PLAINTEXT_RESUME_NAMES:
+        assert not hasattr(display, name)
 
 
 def test_http_details_only_expose_allowlisted_messages() -> None:
@@ -187,45 +191,6 @@ def test_condition_rows_and_trigger_preview_are_bounded_and_redacted() -> None:
     assert preview["test_payload"]["password"] == "[redacted]"
 
 
-def test_server_storage_preserves_complete_resume_state_as_a_copy() -> None:
-    state = _resume_state()
-
-    stored = display.redact_resume_state_for_storage(state)
-
-    assert stored == state
-    assert stored is not state
-    assert stored["harness_pending_approvals"][0]["inputs"] == {
-        "amount": 10,
-        "password": "approval-secret",
-    }
-
-
-def test_tenant_resume_view_redacts_messages_approvals_and_outputs() -> None:
-    state = _resume_state()
-
-    safe = display.redact_resume_state_for_tenant_view(state)
-    serialized = json.dumps(safe)
-
-    assistant = safe["harness_messages"][2]
-    assert assistant["content"] == "[redacted]"
-    assert assistant["tool_calls"][0]["function"]["arguments"] == "[redacted]"
-    assert safe["harness_messages"][1]["content"] == "run the tool"
-    assert safe["harness_pending_approvals"][0]["inputs"]["password"] == "[redacted]"
-    assert safe["harness_active_agents"][0]["api_token"] == "[redacted]"
-    assert safe["task_outputs"]["task-1"]["api_token"] == "[redacted]"
-    for secret in (
-        "private assistant content",
-        "argument-secret",
-        "legacy-secret",
-        "tool-secret",
-        "approval-secret",
-        "config-secret",
-        "agent-secret",
-        "task-secret",
-    ):
-        assert secret not in serialized
-
-
 def test_public_resume_projection_contains_only_renderable_pause_fields() -> None:
     public = display.project_resume_state_public(_resume_state())
     serialized = json.dumps(public)
@@ -237,6 +202,15 @@ def test_public_resume_projection_contains_only_renderable_pause_fields() -> Non
     assert "harness_active_agents" not in serialized
     assert "task_outputs" not in serialized
     assert "approval-secret" not in serialized
+
+
+def test_public_resume_projection_rejects_retired_singular_approval_shape() -> None:
+    assert (
+        display.project_resume_state_public(
+            {"harness_pending_approval": {"inputs": {"password": "secret"}}}
+        )
+        == {}
+    )
 
 
 def test_private_resume_state_is_stripped_recursively_but_public_state_remains() -> None:
@@ -260,73 +234,9 @@ def test_private_resume_state_is_stripped_recursively_but_public_state_remains()
     assert safe == {"events": [{"payload": {"resume_state_public": {"kind": "approval"}}}]}
 
 
-def test_pause_resolution_prefers_internal_state_and_rejects_legacy_approval() -> None:
-    internal = {"task_outputs": {"t1": {"api_token": "full"}}, "iteration": 1}
-    internal_scan = display.resolve_pause_resume_from_messages(
-        [
-            {
-                "role": "assistant",
-                "metadata": {
-                    display.CHAT_INTERNAL_RESUME_STATE_KEY: internal,
-                    "trace_state": {"trace_id": "trace-1"},
-                },
-            }
-        ]
-    )
-    approval_scan = display.resolve_pause_resume_from_messages(
-        [
-            {
-                "role": "assistant",
-                "metadata": {
-                    "execution_log": [
-                        {
-                            "event": "execution_summary",
-                            "data": {
-                                "awaiting_approval": True,
-                                "resume_state": {"api_token": "redacted"},
-                            },
-                        }
-                    ]
-                },
-            }
-        ]
-    )
-
-    assert internal_scan == display.PauseResumeScanResult(
-        resume_state=internal,
-        trace_state={"trace_id": "trace-1"},
-    )
-    assert approval_scan.resume_state is None
-
-
-def test_pause_resolution_keeps_legacy_input_resume_contract() -> None:
-    legacy = {"iteration": 2, "original_query": "continue"}
-
-    scan = display.resolve_pause_resume_from_messages(
-        [
-            {
-                "role": "assistant",
-                "metadata": {
-                    "execution_log": [
-                        {
-                            "event": "execution_summary",
-                            "data": {
-                                "awaiting_input": True,
-                                "resume_state": legacy,
-                            },
-                        }
-                    ]
-                },
-            }
-        ]
-    )
-
-    assert scan.resume_state == legacy
-
-
 def test_chat_client_and_llm_metadata_strip_server_only_resume_state() -> None:
     metadata = {
-        display.CHAT_INTERNAL_RESUME_STATE_KEY: {"api_token": "secret"},
+        "_resume_state": {"api_token": "secret"},
         "_resume_state_claim": {"claim_id": "internal-claim"},
         "execution_log": [
             {
