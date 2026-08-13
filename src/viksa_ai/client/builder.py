@@ -93,12 +93,6 @@ class _AgentsClient:
             "GET", _BUILDER, f"/agent/{agent_id}/revisions/{revision_id}"
         )
 
-    async def share(self, agent_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        return await self._builder._client._arequest(
-            "POST", _BUILDER, f"/agent/{agent_id}/share", json=body
-        )
-
-
 class _DeployClient:
     def __init__(self, builder: BuilderClient) -> None:
         self._builder = builder

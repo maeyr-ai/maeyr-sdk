@@ -7,6 +7,12 @@ from viksa_ai.client import ViksaClient, ViksaNotFoundError
 from viksa_ai.models.agent import AgentCreationRequest, AgentDeletionStatus
 
 
+def test_builder_sdk_exposes_no_direct_cross_org_share_client() -> None:
+    client = ViksaClient("token", base_url="https://api.test")
+
+    assert not hasattr(client.builder.agents, "share")
+
+
 @pytest.mark.asyncio
 async def test_auth_me_success():
     def handler(request: httpx.Request) -> httpx.Response:
