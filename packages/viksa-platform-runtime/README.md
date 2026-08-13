@@ -67,6 +67,14 @@ their domain requires. A successful in-memory `record` call means only that the
 item entered the bounded local queue; transport acknowledgement defines actual
 delivery.
 
+## Remote Trace trust boundary
+
+Production trace producers must configure both `TRACE_SERVICE_URL` and a
+minimum-32-byte `TRACE_INTERNAL_KEY`. These values are owned by Trace and are
+not interchangeable with `CHAT_SERVICE_URL` or `CHAT_INTERNAL_KEY`. Trace key
+rotation uses `TRACE_INTERNAL_KEY_PREVIOUS` only on the receiving service; new
+outbound requests are always signed with the current Trace key.
+
 ## Development
 
 ```bash

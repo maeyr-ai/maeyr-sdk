@@ -8,6 +8,7 @@ import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 from viksa_platform.security.internal_key_guard import assert_production_internal_key
 from viksa_platform.security.internal_request_signing import sign_internal_request
@@ -29,15 +30,18 @@ _recorders: dict[str, RemoteTraceRecorder] = {}
 
 
 def _trace_service_url() -> str:
-    return (
-        os.getenv("TRACE_SERVICE_URL")
-        or os.getenv("CHAT_SERVICE_URL")
-        or "http://trace-service:8000"
-    ).rstrip("/")
+    return (os.getenv("TRACE_SERVICE_URL") or "http://trace-service:8000").rstrip("/")
 
 
 def _trace_internal_key() -> str:
-    return os.getenv("TRACE_INTERNAL_KEY") or os.getenv("CHAT_INTERNAL_KEY") or ""
+    return os.getenv("TRACE_INTERNAL_KEY") or ""
+
+
+def _production_environment() -> bool:
+    return any(
+        str(os.getenv(name) or "").strip().lower() in {"prod", "production"}
+        for name in ("APP_ENVIRONMENT", "ENVIRON", "ENV")
+    )
 
 
 def _bounded_int_env(
@@ -152,13 +156,29 @@ def _serialize_spans(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def assert_trace_producer_configuration(service: str) -> None:
-    """Reject a missing or weak signing key before production traffic."""
+    """Reject a missing Trace endpoint or weak Trace key before production traffic."""
     assert_production_internal_key(
         _trace_internal_key(),
-        env_name="TRACE_INTERNAL_KEY (or CHAT_INTERNAL_KEY fallback)",
+        env_name="TRACE_INTERNAL_KEY",
         service_name=service,
         minimum_bytes=32,
     )
+    configured_url = str(os.getenv("TRACE_SERVICE_URL") or "").strip()
+    if _production_environment() and not configured_url:
+        raise RuntimeError(f"{service}: TRACE_SERVICE_URL must be set in production.")
+    parsed = urlsplit(configured_url or _trace_service_url())
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise RuntimeError(
+            f"{service}: TRACE_SERVICE_URL must be an absolute HTTP(S) URL "
+            "without credentials, query, or fragment."
+        )
 
 
 class RemoteTraceRecorder:
