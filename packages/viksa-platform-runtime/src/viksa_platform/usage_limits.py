@@ -29,6 +29,8 @@ RESOURCE_KEYS: dict[str, tuple[str, str]] = {
     ),
 }
 
+ACCOUNT_USAGE_RESOURCES = frozenset({"chats", "executions", "organizations"})
+
 
 class UsageAuthSettings(Protocol):
     AUTH_SERVICE_URL: str
@@ -284,24 +286,16 @@ class UsageLimitClient:
         account_id: str | None,
         updates: list[dict[str, Any]],
     ) -> bool:
+        for update in updates:
+            if (
+                set(update) != {"resource", "amount"}
+                or update.get("resource") not in ACCOUNT_USAGE_RESOURCES
+            ):
+                raise ValueError("Unsupported account usage update")
         return await self.post_usage_request(
             "/internal/usage/increment",
             {"account_id": account_id, "updates": updates},
             "update",
-        )
-
-    async def update_cloud_worker_usage(
-        self,
-        account_id: str,
-        cpu_millicores: int,
-        memory_mb: int,
-    ) -> bool:
-        return await self.increment_usage(
-            account_id,
-            [
-                {"resource": "cloud_worker_cpu", "amount": cpu_millicores, "absolute": True},
-                {"resource": "cloud_worker_memory", "amount": memory_mb, "absolute": True},
-            ],
         )
 
 
@@ -316,6 +310,9 @@ def usage_control(
     increment: Callable[[str | None, list[dict[str, Any]]], Awaitable[bool]],
 ) -> Callable[[Callable[_P, Awaitable[_R]]], Callable[_P, Awaitable[_R]]]:
     """Build the common pre-enforce/post-increment async decorator."""
+
+    if resource not in ACCOUNT_USAGE_RESOURCES:
+        raise ValueError("Unsupported account usage resource")
 
     def decorator(
         function: Callable[_P, Awaitable[_R]],
