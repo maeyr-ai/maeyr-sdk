@@ -12,10 +12,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, cast
 from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
 from fastapi import HTTPException, status
 
-from viksa_platform.security.internal_request_signing import (
-    requires_internal_signature,
-    sign_internal_request,
-)
+from viksa_platform.security.internal_request_signing import sign_internal_request
 
 RESOURCE_KEYS: dict[str, tuple[str, str]] = {
     "agents": ("agents_count", "max_agents"),
@@ -189,8 +186,6 @@ async def post_signed_usage_request(
                 headers["X-Internal-Org-Id"] = org_id
             if project_id:
                 headers["X-Internal-Project-Id"] = project_id
-            if not requires_internal_signature():
-                headers["X-Internal-Auth-Key"] = settings.AUTH_INTERNAL_KEY
             session = await get_session()
             async with session.post(
                 endpoint,

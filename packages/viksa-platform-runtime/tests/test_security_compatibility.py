@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 from viksa_platform.security.internal import (
-    requires_internal_signature,
     sign_internal_request,
     verify_internal_signature,
 )
@@ -67,7 +66,6 @@ def test_production_environment_wins_over_insecure_escape_hatch(
     monkeypatch.setenv("APP_ENVIRONMENT", "production")
     monkeypatch.setenv("ENV", "test")
     monkeypatch.setenv("ALLOW_INSECURE_JWT", "true")
-    assert requires_internal_signature()
     assert not allows_insecure_jwt_dev()
     with pytest.raises(RuntimeError):
         assert_production_internal_key(

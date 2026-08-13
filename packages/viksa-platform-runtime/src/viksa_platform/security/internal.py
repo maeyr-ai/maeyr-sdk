@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import re
 import time
 from collections.abc import Callable, Mapping
@@ -25,30 +24,6 @@ MINIMUM_KEY_BYTES = 32
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@/+~-]{0,255}$")
 _METHOD_PATTERN = re.compile(r"^[A-Z][A-Z0-9!#$%&'*+.^_`|~-]{0,31}$")
 _SIGNATURE_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-
-
-def _allows_insecure() -> bool:
-    environments = [
-        value.strip().lower()
-        for value in (
-            os.getenv("APP_ENVIRONMENT"),
-            os.getenv("ENVIRON"),
-            os.getenv("ENV"),
-        )
-        if value and value.strip()
-    ]
-    if any(value in {"prod", "production"} for value in environments):
-        return False
-    if os.getenv("ALLOW_INSECURE_JWT", "").lower() in {"1", "true", "yes"}:
-        return True
-    return not environments or all(
-        value in {"development", "dev", "local", "test"} for value in environments
-    )
-
-
-def requires_internal_signature() -> bool:
-    """Return whether this process must authenticate internal mesh requests."""
-    return not _allows_insecure()
 
 
 def _validated_identifier(value: str, *, label: str, optional: bool = False) -> str:
@@ -112,9 +87,9 @@ class TenantContext:
     @classmethod
     def from_headers(cls, headers: Mapping[str, str]) -> TenantContext:
         return cls(
-            account_id=_header(headers, HDR_ACCOUNT_ID, "x-caller-account-id"),
-            organization_id=_header(headers, HDR_ORGANIZATION_ID, "x-caller-org-id"),
-            project_id=_header(headers, HDR_PROJECT_ID, "x-caller-project-id"),
+            account_id=_header(headers, HDR_ACCOUNT_ID),
+            organization_id=_header(headers, HDR_ORGANIZATION_ID),
+            project_id=_header(headers, HDR_PROJECT_ID),
         )
 
     def as_headers(self) -> dict[str, str]:
@@ -568,7 +543,6 @@ __all__ = [
     "build_canonical_string",
     "compute_signature",
     "internal_tenant_headers",
-    "requires_internal_signature",
     "sign_internal_request",
     "tenant_ids_from_headers",
     "verify_internal_signature",

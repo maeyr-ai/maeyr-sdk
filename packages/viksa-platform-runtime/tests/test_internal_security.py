@@ -173,11 +173,11 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
     )
 
 
-def test_tenant_header_aliases_canonicalize_to_one_typed_context() -> None:
+def test_only_canonical_internal_tenant_headers_are_authenticated() -> None:
     headers = {
-        "X-Caller-Account-ID": "AC-1",
+        "X-Internal-Account-ID": "AC-1",
         "x-internal-org-id": "OR-1",
-        "X-Caller-Project-ID": "PR-1",
+        "X-Internal-Project-ID": "PR-1",
     }
     assert TenantContext.from_headers(headers) == TENANT
     assert tenant_ids_from_headers(headers) == ("AC-1", "OR-1", "PR-1")
@@ -193,7 +193,7 @@ def test_tenant_header_aliases_canonicalize_to_one_typed_context() -> None:
     assert internal_tenant_headers_from_mapping({"account_id": "AC-1"}) is None
 
 
-def test_duplicate_authentication_or_tenant_alias_headers_are_rejected() -> None:
+def test_duplicate_authentication_headers_are_rejected() -> None:
     signer = InternalRequestSigner(CURRENT_KEY, CALLER, clock=lambda: 5_000)
     verifier = InternalRequestVerifier(KeyRing(CURRENT_KEY), clock=lambda: 5_001)
     signed = signer.sign(method="POST", path="/internal/run", body=b"{}", tenant=TENANT)
@@ -210,10 +210,4 @@ def test_duplicate_authentication_or_tenant_alias_headers_are_rejected() -> None
             headers=duplicate_signature,
         )
 
-    with pytest.raises(ValueError, match="duplicate canonical header"):
-        TenantContext.from_headers(
-            {
-                "x-internal-account-id": "AC-1",
-                "X-Caller-Account-ID": "AC-1",
-            }
-        )
+    assert TenantContext.from_headers({"X-Caller-Account-ID": "AC-1"}) == TenantContext()

@@ -5,10 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from viksa_platform.security.internal_request_signing import (
-    requires_internal_signature,
-    sign_internal_request,
-)
+from viksa_platform.security.internal_request_signing import sign_internal_request
 
 
 class AuthInternalSettings(Protocol):
@@ -80,8 +77,6 @@ def build_auth_internal_headers(
             project_id=project_id,
         )
     )
-    if not requires_internal_signature():
-        headers["X-Internal-Auth-Key"] = key
     return headers
 
 
@@ -114,5 +109,4 @@ __all__ = [
     "build_auth_internal_headers",
     "configure_auth_internal_request",
     "encode_internal_json",
-    "requires_internal_signature",
 ]

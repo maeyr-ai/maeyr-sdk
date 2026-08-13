@@ -9,10 +9,7 @@ import aiohttp
 from fastapi import Depends, Header, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from viksa_platform.security.internal_request_signing import (
-    requires_internal_signature,
-    sign_internal_request,
-)
+from viksa_platform.security.internal_request_signing import sign_internal_request
 
 
 @dataclass
@@ -234,8 +231,6 @@ async def _validate_credential_with_retries(
             if project_id:
                 headers["X-Tenant-Project-Id"] = project_id
                 headers["X-Internal-Project-Id"] = project_id
-            if not requires_internal_signature():
-                headers["X-Internal-Auth-Key"] = auth_settings.AUTH_INTERNAL_KEY
             data = await _call_auth_validate(
                 session=session,
                 endpoint=endpoint,
