@@ -116,12 +116,11 @@ def redis_tls_connection_kwargs(
         "ssl_check_hostname": True,
     }
     normalized_path = ca_cert_path.strip()
-    production = environment.strip().lower() in {"prod", "production"}
     if not normalized_path:
-        if production:
-            raise RuntimeError(
-                "REDIS_CA_CERT_PATH is required in production when REDIS_SSL is enabled"
-            )
+        # Python's TLS stack uses the operating-system trust store when no
+        # private CA bundle is supplied. This is the correct contract for
+        # managed services whose certificates chain to public roots (AWS and
+        # Azure), while private/self-signed deployments can still pin a CA.
         return kwargs
     ca_file = Path(normalized_path).expanduser()
     if not ca_file.is_file() or not os.access(ca_file, os.R_OK):
@@ -204,6 +203,9 @@ def redis_connection_kwargs(environ: Mapping[str, str] | None = None) -> dict[st
         return {}
 
     kwargs: dict[str, Any] = {"decode_responses": True}
+    username = env.get("REDIS_USERNAME")
+    if username:
+        kwargs["username"] = username
     password = env.get("REDIS_PASSWORD")
     if password:
         kwargs["password"] = password
@@ -214,10 +216,6 @@ def redis_connection_kwargs(environ: Mapping[str, str] | None = None) -> dict[st
     kwargs.update({"ssl_cert_reqs": "required", "ssl_check_hostname": True})
     ca_cert_path = _value(env, "REDIS_CA_CERT_PATH")
     if not ca_cert_path:
-        if _is_production(env):
-            raise RedisConfigurationError(
-                "REDIS_CA_CERT_PATH is required in production when REDIS_SSL is enabled"
-            )
         return kwargs
 
     ca_file = Path(ca_cert_path).expanduser()

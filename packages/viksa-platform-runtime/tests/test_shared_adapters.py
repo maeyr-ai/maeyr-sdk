@@ -21,6 +21,7 @@ from viksa_platform.mongo import (
 )
 from viksa_platform.redis.config import (
     build_redis_connection_string,
+    redis_connection_kwargs,
     redis_ssl_enabled,
     redis_tls_connection_kwargs,
 )
@@ -80,12 +81,25 @@ def test_redis_policy_covers_urls_tls_and_ca_validation(tmp_path: Path) -> None:
         ca_cert_path=str(ca_file),
         environment="production",
     )["ssl_ca_certs"] == str(ca_file)
-    with pytest.raises(RuntimeError, match="REDIS_CA_CERT_PATH"):
-        redis_tls_connection_kwargs(
-            ssl_enabled=True,
-            ca_cert_path="",
-            environment="production",
-        )
+    assert redis_tls_connection_kwargs(
+        ssl_enabled=True,
+        ca_cert_path="",
+        environment="production",
+    ) == {"ssl_cert_reqs": "required", "ssl_check_hostname": True}
+    assert redis_connection_kwargs(
+        {
+            "APP_ENVIRONMENT": "production",
+            "REDIS_URL": "rediss://managed-cache.example:6379/0",
+            "REDIS_USERNAME": "runtime",
+            "REDIS_PASSWORD": "secret",
+        }
+    ) == {
+        "decode_responses": True,
+        "username": "runtime",
+        "password": "secret",
+        "ssl_cert_reqs": "required",
+        "ssl_check_hostname": True,
+    }
 
 
 def test_mongo_policies_are_transport_independent() -> None:
