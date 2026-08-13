@@ -45,14 +45,14 @@ automation must pin that private checkout to a full commit SHA. See the source
 gate in [`MIGRATION.md`](MIGRATION.md).
 
 The instance APIs are canonical. Functional `configure_*`, `start_*`,
-`record_*`, and `stop_*` helpers hold process-global state only to support a
-bounded compatibility migration. New service code should construct recorders,
-signers, and verifiers in its composition root and inject their protocols.
+`record_*`, and `stop_*` helpers provide the shared process-level lifecycle
+used by current service composition roots. New service code should construct
+recorders, signers, and verifiers in its composition root and inject their
+protocols.
 
 ## Ownership exclusions
 
-Apart from the exact legacy `requires_internal_signature` compatibility helper,
-this package intentionally does **not** own:
+This package intentionally does **not** own:
 
 - environment-variable loading or the decision of when startup policy applies;
 - route-specific caller allowlists or authorization decisions;

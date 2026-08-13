@@ -51,7 +51,6 @@ guess legacy resource or token semantics.
 | current/previous secrets | Immutable `KeyRing`; verifier returns the matched `key_slot` |
 | tenant header aliases | `TenantContext.from_headers` and `.as_headers` |
 | `internal_tenant_headers*` | Exact call-shape facades in `viksa_platform.compat.internal_tenant_headers` |
-| `requires_internal_signature` | Exact compatibility helper reads the historical environment flags; new code injects explicit policy into `RequestVerifier` |
 | FastAPI tenant guards | Exact compatibility guards retain historical `HTTPException` behavior; new inbound adapters may translate `TenantContext` validation themselves |
 | per-route caller allowlists | Application/inbound adapter authorizes `VerifiedCaller.caller` |
 | repeated placeholder/weak-secret classification | `SecretStrengthPolicy`; each service still decides where and when to enforce it |
