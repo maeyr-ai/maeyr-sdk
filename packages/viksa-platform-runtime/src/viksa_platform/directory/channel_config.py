@@ -3,19 +3,51 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings
+
+
+def _production_environment() -> bool:
+    return any(
+        str(os.environ.get(name) or "").strip().lower() in {"prod", "production"}
+        for name in ("APP_ENVIRONMENT", "ENVIRON", "ENV")
+    )
+
+
+def _public_runtime_url(name: str, local_default: str) -> str:
+    value = str(os.environ.get(name) or "").strip()
+    production = _production_environment()
+    if not value:
+        if production:
+            raise RuntimeError(f"{name} must be set in production")
+        value = local_default
+    try:
+        parsed = urlsplit(value)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an absolute public URL") from exc
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or (production and parsed.scheme != "https")
+    ):
+        raise RuntimeError(f"{name} must be an absolute public URL")
+    return value.rstrip("/")
 
 
 class ChannelSettings(BaseSettings):
     """Environment-backed channel and public-widget settings."""
 
-    WEBHOOK_BASE_URL: str = os.environ.get(
-        "VOLT_CHANNEL_WEBHOOK_BASE_URL", "https://api.viksaai.com"
-    ).rstrip("/")
-    WIDGET_JS_BASE_URL: str = os.environ.get(
-        "VOLT_WIDGET_JS_BASE_URL", "https://app.viksaai.com/widget/v1"
-    ).rstrip("/")
+    WEBHOOK_BASE_URL: str = _public_runtime_url(
+        "VOLT_CHANNEL_WEBHOOK_BASE_URL", "http://localhost:8000"
+    )
+    WIDGET_JS_BASE_URL: str = _public_runtime_url(
+        "VOLT_WIDGET_JS_BASE_URL", "http://localhost:3000/widget/v1"
+    )
     WIDGET_SESSION_TTL_SECONDS: int = int(
         os.environ.get("VOLT_WIDGET_SESSION_TTL_SECONDS", str(4 * 3600))
     )

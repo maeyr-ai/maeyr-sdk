@@ -30,7 +30,12 @@ _recorders: dict[str, RemoteTraceRecorder] = {}
 
 
 def _trace_service_url() -> str:
-    return (os.getenv("TRACE_SERVICE_URL") or "http://trace-service:8000").rstrip("/")
+    configured = str(os.getenv("TRACE_SERVICE_URL") or "").strip()
+    if configured:
+        return configured.rstrip("/")
+    if _production_environment():
+        raise RuntimeError("TRACE_SERVICE_URL must be set in production.")
+    return "http://localhost:8000"
 
 
 def _trace_internal_key() -> str:

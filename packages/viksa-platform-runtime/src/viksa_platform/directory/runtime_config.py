@@ -32,25 +32,16 @@ class RuntimeSettings(BaseSettings):
         os.environ.get("RUNTIME_CREDENTIAL_KEYRING", "")
     )
 
-    RUNTIME_NAMESPACE: str = os.environ.get("VOLT_RUNTIME_NAMESPACE", "flagship")
-    RUNTIME_REPLICAS: int = int(os.environ.get("VOLT_RUNTIME_REPLICAS", "1"))
-    RUNTIME_DEPLOYMENT_PREFIX: str = os.environ.get(
-        "VOLT_RUNTIME_DEPLOYMENT_PREFIX", "volt-runtime"
-    )
-    RUNTIME_SECRET_PREFIX: str = os.environ.get("VOLT_RUNTIME_SECRET_PREFIX", "volt-runtime-secret")
-    RUNTIME_IMAGE: str = os.environ.get("VOLT_RUNTIME_IMAGE", "volt/slack:latest")
-    RUNTIME_PULL_SECRET: str = os.environ.get("VOLT_RUNTIME_PULL_SECRET", "regcred-registry")
-    RUNTIME_PULL_POLICY: str = os.environ.get("VOLT_RUNTIME_PULL_POLICY", "Always")
+    # Slack is a stable external protocol endpoint. Runtime-pod namespace,
+    # image, pull-secret, and naming fields previously declared here had no
+    # consumers; keeping them would create a second, unauthoritative deployment
+    # contract outside the master configuration.
     SLACK_API_BASE_URL: str = os.environ.get(
         "VOLT_RUNTIME_SLACK_API_BASE_URL", "https://slack.com/api"
     ).rstrip("/")
     SLACK_API_TIMEOUT_SECONDS: float = float(
         os.environ.get("VOLT_RUNTIME_SLACK_API_TIMEOUT_SECONDS", "8")
     )
-
-    ENGINE_PUBLIC_URL: str = os.environ.get("VOLT_ENGINE_PUBLIC_URL", "").rstrip("/")
-    ENGINE_INTERNAL_KEY: str = os.environ.get("VOLT_ENGINE_INTERNAL_KEY", "")
-    ENABLED_CHANNELS: str = os.environ.get("VOLT_RUNTIME_ENABLED_CHANNELS", "slack")
 
     @property
     def keyring(self) -> Dict[str, str]:
