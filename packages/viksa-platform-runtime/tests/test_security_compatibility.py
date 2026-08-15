@@ -42,6 +42,7 @@ def test_legacy_security_call_shapes_remain_keyword_compatible() -> None:
         "org_id",
         "project_id",
         "timestamp",
+        "nonce",
     ]
     assert list(inspect.signature(verify_internal_signature).parameters) == [
         "secret",
@@ -56,6 +57,7 @@ def test_legacy_security_call_shapes_remain_keyword_compatible() -> None:
         "project_id",
         "max_skew_sec",
         "now",
+        "nonce",
     ]
     assert "minimum_bytes" in inspect.signature(assert_production_internal_key).parameters
 

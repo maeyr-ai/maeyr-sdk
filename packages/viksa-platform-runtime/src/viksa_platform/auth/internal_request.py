@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from typing import Any, Protocol
 
 from viksa_platform.security.internal_request_signing import sign_internal_request
@@ -75,6 +76,7 @@ def build_auth_internal_headers(
             account_id=account_id,
             org_id=org_id,
             project_id=project_id,
+            nonce=secrets.token_urlsafe(24),
         )
     )
     return headers

@@ -53,6 +53,15 @@ def test_exact_body_signing_and_current_key_verification() -> None:
     assert verified.tenant == TENANT
     assert verified.key_slot == "current"
 
+    tampered_nonce = {**signed.as_dict(), "x-internal-nonce": "x" * 32}
+    with pytest.raises(SignatureVerificationError):
+        verifier.verify(
+            method="POST",
+            path="/internal/run?mode=sync",
+            body=body,
+            headers=tampered_nonce,
+        )
+
     with pytest.raises(SignatureVerificationError):
         verifier.verify(
             method="POST",
@@ -116,7 +125,7 @@ def test_signature_rejects_tenant_path_timestamp_and_unknown_key_drift() -> None
     )
 
 
-def test_compatibility_facade_matches_v1_canonical_contract() -> None:
+def test_compatibility_facade_matches_nonce_bound_canonical_contract() -> None:
     secret = "s" * 32
     body = b'{"a":1}'
     canonical = "\n".join(
@@ -129,6 +138,7 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
             "OR-1",
             "PR-1",
             "worker-service",
+            "n" * 32,
         ]
     )
     expected = hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
@@ -143,6 +153,7 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
             org_id="OR-1",
             project_id="PR-1",
             service="worker-service",
+            nonce="n" * 32,
         )
         == canonical
     )
@@ -156,6 +167,7 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
         org_id="OR-1",
         project_id="PR-1",
         timestamp=4_000,
+        nonce="n" * 32,
     )
     assert headers["x-internal-signature"] == expected
     assert verify_internal_signature(
@@ -166,11 +178,36 @@ def test_compatibility_facade_matches_v1_canonical_contract() -> None:
         service=headers["x-internal-service"],
         timestamp=headers["x-internal-timestamp"],
         signature=headers["x-internal-signature"],
+        nonce=headers["x-internal-nonce"],
         account_id="AC-1",
         org_id="OR-1",
         project_id="PR-1",
         now=4_001,
     )
+
+
+def test_explicit_nonces_distinguish_same_second_requests() -> None:
+    first = sign_internal_request(
+        "s" * 32,
+        method="POST",
+        path="/internal/validate-token",
+        body=b'{"access_token":"same"}',
+        service="builder-service",
+        timestamp=4_000,
+        nonce="a" * 32,
+    )
+    second = sign_internal_request(
+        "s" * 32,
+        method="POST",
+        path="/internal/validate-token",
+        body=b'{"access_token":"same"}',
+        service="builder-service",
+        timestamp=4_000,
+        nonce="b" * 32,
+    )
+
+    assert first["x-internal-nonce"] != second["x-internal-nonce"]
+    assert first["x-internal-signature"] != second["x-internal-signature"]
 
 
 def test_only_canonical_internal_tenant_headers_are_authenticated() -> None:

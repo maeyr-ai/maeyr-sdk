@@ -14,6 +14,7 @@ from typing import Protocol
 HDR_SERVICE = "x-internal-service"
 HDR_TIMESTAMP = "x-internal-timestamp"
 HDR_SIGNATURE = "x-internal-signature"
+HDR_NONCE = "x-internal-nonce"
 HDR_ACCOUNT_ID = "x-internal-account-id"
 HDR_ORGANIZATION_ID = "x-internal-org-id"
 HDR_PROJECT_ID = "x-internal-project-id"
@@ -24,6 +25,7 @@ MINIMUM_KEY_BYTES = 32
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@/+~-]{0,255}$")
 _METHOD_PATTERN = re.compile(r"^[A-Z][A-Z0-9!#$%&'*+.^_`|~-]{0,31}$")
 _SIGNATURE_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+_NONCE_PATTERN = re.compile(r"^[A-Za-z0-9_-]{32}$")
 
 
 def _validated_identifier(value: str, *, label: str, optional: bool = False) -> str:
@@ -153,11 +155,14 @@ class SigningHeaders:
     caller: CallerContext
     tenant: TenantContext
     timestamp: int
+    nonce: str
     signature: str
 
     def __post_init__(self) -> None:
         if self.timestamp < 0:
             raise ValueError("timestamp is invalid")
+        if self.nonce and not _NONCE_PATTERN.fullmatch(self.nonce):
+            raise ValueError("nonce is invalid")
         if not _SIGNATURE_PATTERN.fullmatch(self.signature):
             raise ValueError("signature is invalid")
 
@@ -167,6 +172,8 @@ class SigningHeaders:
             HDR_TIMESTAMP: str(self.timestamp),
             HDR_SIGNATURE: self.signature,
         }
+        if self.nonce:
+            headers[HDR_NONCE] = self.nonce
         headers.update(self.tenant.as_headers())
         return headers
 
@@ -196,6 +203,7 @@ class RequestSigner(Protocol):
         body: bytes,
         tenant: TenantContext = TenantContext(),
         timestamp: int | None = None,
+        nonce: str | None = None,
     ) -> SigningHeaders:
         """Sign the exact transmitted body bytes."""
 
@@ -226,6 +234,7 @@ def _canonical_bytes_from_fields(
     organization_id: str,
     project_id: str,
     service: str,
+    nonce: str = "",
 ) -> bytes:
     normalized_method = method.upper()
     if not _METHOD_PATTERN.fullmatch(normalized_method):
@@ -253,6 +262,12 @@ def _canonical_bytes_from_fields(
         body_digest,
         *identity_fields,
     )
+    # An empty nonce keeps receiver-first upgrades compatible with legacy v1
+    # callers. All current signers emit and bind a random nonce.
+    if nonce:
+        if not _NONCE_PATTERN.fullmatch(nonce):
+            raise ValueError("nonce is invalid")
+        fields = (*fields, nonce)
     return "\n".join(fields).encode("utf-8")
 
 
@@ -264,8 +279,9 @@ def build_canonical_bytes(
     body: bytes,
     tenant: TenantContext = TenantContext(),
     caller: CallerContext,
+    nonce: str = "",
 ) -> bytes:
-    """Build the v1 canonical representation without altering body bytes."""
+    """Build the canonical representation without altering body bytes."""
 
     return _canonical_bytes_from_fields(
         method=method,
@@ -276,6 +292,7 @@ def build_canonical_bytes(
         organization_id=tenant.organization_id,
         project_id=tenant.project_id,
         service=caller.service,
+        nonce=nonce,
     )
 
 
@@ -305,8 +322,10 @@ class InternalRequestSigner:
         body: bytes,
         tenant: TenantContext = TenantContext(),
         timestamp: int | None = None,
+        nonce: str | None = None,
     ) -> SigningHeaders:
         signed_at = self._clock() if timestamp is None else timestamp
+        request_nonce = "" if nonce is None else nonce
         canonical = build_canonical_bytes(
             method=method,
             path=path,
@@ -314,11 +333,13 @@ class InternalRequestSigner:
             body=body,
             tenant=tenant,
             caller=self._caller,
+            nonce=request_nonce,
         )
         return SigningHeaders(
             caller=self._caller,
             tenant=tenant,
             timestamp=signed_at,
+            nonce=request_nonce,
             signature=_compute_signature(self._key, canonical),
         )
 
@@ -356,6 +377,7 @@ class InternalRequestVerifier:
             if tenant is not None and header_tenant != tenant:
                 raise ValueError("tenant")
             timestamp_text = _header(headers, HDR_TIMESTAMP)
+            nonce = _header(headers, HDR_NONCE)
             signature = _header(headers, HDR_SIGNATURE).lower()
             if not timestamp_text.isascii() or not timestamp_text.isdigit():
                 raise ValueError("timestamp")
@@ -372,6 +394,7 @@ class InternalRequestVerifier:
                 body=body,
                 tenant=resolved_tenant,
                 caller=caller,
+                nonce=nonce,
             )
         except (TypeError, ValueError) as exc:
             raise SignatureVerificationError("internal request signature is invalid") from exc
@@ -424,6 +447,7 @@ def build_canonical_string(
     org_id: str = "",
     project_id: str = "",
     service: str = "",
+    nonce: str = "",
 ) -> str:
     return _canonical_bytes_from_fields(
         method=method,
@@ -434,6 +458,7 @@ def build_canonical_string(
         organization_id=org_id,
         project_id=project_id,
         service=service,
+        nonce=nonce,
     ).decode("utf-8")
 
 
@@ -452,8 +477,10 @@ def sign_internal_request(
     org_id: str = "",
     project_id: str = "",
     timestamp: int | None = None,
+    nonce: str | None = None,
 ) -> dict[str, str]:
     signed_at = int(time.time()) if timestamp is None else timestamp
+    request_nonce = "" if nonce is None else nonce
     canonical = build_canonical_string(
         method=method,
         path=path,
@@ -463,12 +490,16 @@ def sign_internal_request(
         org_id=org_id,
         project_id=project_id,
         service=service,
+        nonce=request_nonce,
     )
-    return {
+    headers = {
         HDR_SERVICE: service,
         HDR_TIMESTAMP: str(signed_at),
         HDR_SIGNATURE: compute_signature(secret, canonical),
     }
+    if request_nonce:
+        headers[HDR_NONCE] = request_nonce
+    return headers
 
 
 def verify_internal_signature(
@@ -485,6 +516,7 @@ def verify_internal_signature(
     project_id: str = "",
     max_skew_sec: int = DEFAULT_MAX_SKEW_SECONDS,
     now: int | None = None,
+    nonce: str = "",
 ) -> bool:
     if not secret or not service or not timestamp or not signature:
         return False
@@ -502,6 +534,7 @@ def verify_internal_signature(
             org_id=org_id,
             project_id=project_id,
             service=service,
+            nonce=nonce,
         )
         expected = compute_signature(secret, canonical)
     except (TypeError, ValueError):
@@ -524,6 +557,7 @@ __all__ = [
     "CallerContext",
     "DEFAULT_MAX_SKEW_SECONDS",
     "HDR_ACCOUNT_ID",
+    "HDR_NONCE",
     "HDR_ORGANIZATION_ID",
     "HDR_PROJECT_ID",
     "HDR_SERVICE",
