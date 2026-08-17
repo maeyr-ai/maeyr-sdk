@@ -154,3 +154,23 @@ async def test_agent_delete_exposes_nonterminal_202_state_as_typed_result():
     assert result.status == AgentDeletionStatus.APPROVAL_PENDING
     assert result.complete is False
     assert result.pending_change_id == "PC-1"
+
+
+@pytest.mark.asyncio
+async def test_agent_deploy_uses_canonical_route_without_redirect():
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json={"status": "scheduled", "agent_id": "AI-1"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
+        client = ViksaClient("token", base_url="https://api.test")
+        client._transport._async_client = http
+        result = await client.builder.deploy.deploy("AI-1")
+
+    assert result == {"status": "scheduled", "agent_id": "AI-1"}
+    assert len(captured) == 1
+    assert captured[0].method == "POST"
+    assert captured[0].url.path == "/builder/deploy"

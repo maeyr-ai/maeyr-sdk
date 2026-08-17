@@ -104,7 +104,7 @@ class _DeployClient:
 
     async def deploy(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest(
-            "POST", _BUILDER, "/deploy/", json={"agent_id": agent_id}
+            "POST", _BUILDER, "/deploy", json={"agent_id": agent_id}
         )
 
     async def reconcile(self, agent_id: str) -> Dict[str, Any]:
