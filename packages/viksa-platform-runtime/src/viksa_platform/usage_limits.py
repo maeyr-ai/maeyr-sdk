@@ -12,24 +12,19 @@ from typing import Any, ParamSpec, Protocol, TypeVar, cast
 from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
 from fastapi import HTTPException, status
 
+from viksa_platform.resource_allocation import PROJECT_RESOURCES
 from viksa_platform.security.internal_request_signing import sign_internal_request
 
 RESOURCE_KEYS: dict[str, tuple[str, str]] = {
-    "agents": ("agents_count", "max_agents"),
+    **{
+        name: (resource.usage_key, resource.allocation_key)
+        for name, resource in PROJECT_RESOURCES.items()
+    },
     "chats": ("chats_today_count", "max_chats_per_day"),
     "executions": ("executions_today_count", "max_executions_per_day"),
-    "organizations": ("organizations_count", "max_organizations"),
-    "cloud_worker_cpu": (
-        "cloud_worker_cpu_millicores_usage",
-        "max_cloud_worker_cpu_millicores",
-    ),
-    "cloud_worker_memory": (
-        "cloud_worker_memory_mb_usage",
-        "max_cloud_worker_memory_mb",
-    ),
 }
 
-ACCOUNT_USAGE_RESOURCES = frozenset({"chats", "executions", "organizations"})
+ACCOUNT_USAGE_RESOURCES = frozenset({"chats", "executions"})
 
 
 class UsageAuthSettings(Protocol):

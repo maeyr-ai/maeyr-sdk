@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import secrets
 from collections import deque
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import Any
 
-from viksa_platform.metrics.constants import PREFIX_TOKEN_USAGE, entity_type_from_resource_type
+from viksa_platform.metrics.billing import UsageDeliveryRejected, canonicalize_usage_event
+from viksa_platform.metrics.constants import entity_type_from_resource_type
 from viksa_platform.metrics.context import _call_counter, get_usage_context
 from viksa_platform.metrics.resource_refs import build_resource_refs, merge_resource_refs
 from viksa_platform.metrics.transport import enqueue_event
@@ -72,10 +72,16 @@ async def record_usage(
     sub_resource_id: str | None = None,
     metadata: dict[str, Any] | None = None,
     **override_kwargs: Any,
-) -> None:
+) -> str | None:
     """Record one token-usage event without creating unsupervised tasks."""
-    if tokens_used <= 0 and not (prompt_tokens or completion_tokens):
-        return
+    record_zero_usage = bool(
+        override_kwargs.get("record_zero_usage")
+        or override_kwargs.get("provider_request_id")
+        or override_kwargs.get("billable_units")
+        or override_kwargs.get("idempotency_key")
+    )
+    if tokens_used <= 0 and not (prompt_tokens or completion_tokens) and not record_zero_usage:
+        return None
 
     context = get_usage_context()
     now = datetime.now(timezone.utc)
@@ -104,7 +110,7 @@ async def record_usage(
 
     total = tokens_used or ((prompt_tokens or 0) + (completion_tokens or 0))
     doc: dict[str, Any] = {
-        "_id": override_kwargs.get("_id") or f"{PREFIX_TOKEN_USAGE}-{secrets.token_hex(16)}",
+        "_id": override_kwargs.get("_id"),
         "account_id": base.get("account_id", "unknown"),
         "org_id": base.get("org_id", ""),
         "project_id": base.get("project_id", ""),
@@ -126,13 +132,25 @@ async def record_usage(
         "completion_tokens": completion_tokens,
         "estimated": estimated,
         "model": model,
+        "provider": base.get("provider") or resolved_metadata.get("provider") or "unknown",
+        "provider_request_id": base.get("provider_request_id") or resolved_metadata.get("provider_request_id"),
+        "provider_operation": base.get("provider_operation"),
+        "idempotency_key": base.get("idempotency_key"),
+        "usage_status": base.get("usage_status"),
+        "token_details": base.get("token_details"),
+        "billable_units": base.get("billable_units"),
+        "cost_usd": base.get("cost_usd"),
+        "cost_nanos_usd": base.get("cost_nanos_usd"),
+        "pricing": base.get("pricing"),
+        "pricing_version": base.get("pricing_version"),
         "metadata": resolved_metadata or None,
         "resource_refs": base.get("resource_refs") or None,
         "created_at": now,
         "date_bucket": now.strftime("%Y-%m-%d"),
     }
-    if not await enqueue_event(doc):
-        _append_memory(doc)
+    doc = canonicalize_usage_event(doc)
+    if not await enqueue_event(doc) and not _append_memory(doc):
+        raise UsageDeliveryRejected("token usage event was rejected by every queue")
     if not _running and _flush_handler is not None:
         _ensure_flush_worker(wake=False, automatic=True)
     else:
@@ -145,6 +163,7 @@ async def record_usage(
         completion_tokens,
         model,
     )
+    return str(doc["_id"])
 
 
 async def record_from_context(
@@ -171,8 +190,6 @@ async def ingest_events(events: list[dict[str, Any]]) -> None:
             now = datetime.now(timezone.utc)
             doc["created_at"] = now
             doc.setdefault("date_bucket", now.strftime("%Y-%m-%d"))
-        if not doc.get("_id"):
-            doc["_id"] = f"{PREFIX_TOKEN_USAGE}-{secrets.token_hex(16)}"
         if not doc.get("entity_type") and doc.get("resource_type"):
             doc["entity_type"] = entity_type_from_resource_type(doc["resource_type"])
         if not doc.get("resource_refs"):
@@ -191,8 +208,9 @@ async def ingest_events(events: list[dict[str, Any]]) -> None:
                 )
                 or None
             )
-        if not await enqueue_event(doc):
-            _append_memory(doc)
+        doc = canonicalize_usage_event(doc)
+        if not await enqueue_event(doc) and not _append_memory(doc):
+            raise UsageDeliveryRejected("token usage event was rejected by every queue")
     _signal_flush()
 
 
