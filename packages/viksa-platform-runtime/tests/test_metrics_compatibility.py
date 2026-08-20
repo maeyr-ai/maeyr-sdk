@@ -7,6 +7,7 @@ from collections import defaultdict
 import pytest
 from pydantic import ValidationError
 
+from viksa_platform.metrics.billing import UsageDeliveryRejected
 from viksa_platform.metrics.constants import (
     REDIS_PROCESSING_QUEUE_KEY,
     REDIS_QUEUE_KEY,
@@ -19,7 +20,11 @@ from viksa_platform.metrics.context import (
     start_activity,
     token_metadata_patch,
 )
-from viksa_platform.metrics.recorder import configure_recorder, record_usage
+from viksa_platform.metrics.recorder import (
+    configure_delivery_policy,
+    configure_recorder,
+    record_usage,
+)
 from viksa_platform.metrics.resource_refs import (
     build_channel_turn_resource_refs,
     build_resource_refs,
@@ -146,10 +151,27 @@ def test_context_and_additive_resource_references_preserve_fleet_contract() -> N
 
 def test_schema_preserves_id_alias_and_bounds_internal_batches() -> None:
     event = TokenUsageEvent.model_validate(
-        {"_id": "TU-1", "account_id": "a", "org_id": "o", "project_id": "p"}
+        {
+            "_id": "TU-1",
+            "account_id": "a",
+            "org_id": "o",
+            "project_id": "p",
+            "credential_source": "customer",
+            "llm_source_scope": "project",
+            "billable_to_customer": False,
+            "cost_nanos_usd": 0,
+            "estimated_cost_nanos_usd": 12_345,
+            "estimated_cost_usd": 0.000012345,
+            "provider_equivalent_cost_status": "priced",
+        }
     )
     assert event.event_id == "TU-1"
-    assert event.model_dump(by_alias=True)["_id"] == "TU-1"
+    serialized = event.model_dump(by_alias=True)
+    assert serialized["_id"] == "TU-1"
+    assert serialized["billable_to_customer"] is False
+    assert serialized["cost_nanos_usd"] == 0
+    assert serialized["estimated_cost_nanos_usd"] == 12_345
+    assert serialized["provider_equivalent_cost_status"] == "priced"
     with pytest.raises(ValidationError):
         TokenUsageBatchRequest(events=[event] * 501)
 
@@ -170,6 +192,38 @@ async def test_transport_reserves_then_acknowledges_without_delete_before_commit
         assert await queue_length() == 0
     finally:
         configure_transport(None)
+
+
+@pytest.mark.asyncio
+async def test_transport_uses_durable_fallback_when_redis_is_unavailable() -> None:
+    accepted: list[dict[str, object]] = []
+
+    async def persist(doc: dict[str, object]) -> bool:
+        accepted.append(doc)
+        return True
+
+    configure_transport(None, durable_fallback=persist)
+    try:
+        assert await enqueue_event({"_id": "TU-fallback"}) is True
+        assert accepted == [{"_id": "TU-fallback"}]
+    finally:
+        configure_transport(None)
+
+
+@pytest.mark.asyncio
+async def test_strict_delivery_rejects_process_local_memory_as_acknowledgement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def reject(_doc: dict[str, object]) -> bool:
+        return False
+
+    monkeypatch.setattr("viksa_platform.metrics.recorder.enqueue_event", reject)
+    configure_delivery_policy(allow_memory_fallback=False)
+    try:
+        with pytest.raises(UsageDeliveryRejected, match="not durably accepted"):
+            await record_usage(tokens_used=1, account_id="account")
+    finally:
+        configure_delivery_policy(allow_memory_fallback=True)
 
 
 def test_usage_context_keyword_contract() -> None:

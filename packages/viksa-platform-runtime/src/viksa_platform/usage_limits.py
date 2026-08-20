@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import uuid
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar, cast
@@ -12,7 +13,11 @@ from typing import Any, ParamSpec, Protocol, TypeVar, cast
 from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
 from fastapi import HTTPException, status
 
-from viksa_platform.resource_allocation import PROJECT_RESOURCES
+from viksa_platform.resource_allocation import (
+    MAX_RESOURCE_VALUE,
+    PROJECT_RESOURCES,
+    UNLIMITED,
+)
 from viksa_platform.security.internal_request_signing import sign_internal_request
 
 RESOURCE_KEYS: dict[str, tuple[str, str]] = {
@@ -88,8 +93,29 @@ async def enforce_limit(
     usage_key, limit_key = keys
     used = current_user.get("usage", {}).get(usage_key, 0)
     maximum = current_user.get("limits", {}).get(limit_key, 0)
-    total = used + requested_amount if requested_amount > 0 else used
-    if maximum > 0 and total >= maximum:
+    if (
+        type(used) is not int
+        or used < 0
+        or used > MAX_RESOURCE_VALUE
+        or type(maximum) is not int
+        or maximum < UNLIMITED
+        or maximum > MAX_RESOURCE_VALUE
+        or type(requested_amount) is not int
+        or requested_amount < 0
+        or requested_amount > MAX_RESOURCE_VALUE
+        or used + requested_amount > MAX_RESOURCE_VALUE
+    ):
+        logger.error(
+            "Invalid %s usage policy for principal=%s",
+            resource,
+            current_user.get("user_id"),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Usage policy is unavailable",
+        )
+    total = used + requested_amount
+    if maximum != UNLIMITED and total > maximum:
         logger.warning(
             "%s limit reached: %s/%s for principal=%s",
             resource,
@@ -161,7 +187,8 @@ async def post_signed_usage_request(
         return False
     body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     endpoint = f"{settings.AUTH_SERVICE_URL.rstrip('/')}{endpoint_path}"
-    for attempt in range(1, max(1, attempts) + 1):
+    max_attempts = max(1, attempts)
+    for attempt in range(1, max_attempts + 1):
         try:
             org_id = str(payload.get("org_id") or "").strip()
             project_id = str(payload.get("project_id") or "").strip()
@@ -192,11 +219,26 @@ async def post_signed_usage_request(
             ) as response:
                 if response.status == 200:
                     return True
+                if response.status == status.HTTP_429_TOO_MANY_REQUESTS:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Plan limit reached. Please upgrade your plan.",
+                    )
+                if 400 <= response.status < 500:
+                    logger.error(
+                        "Usage %s rejected with terminal status=%s",
+                        operation_name,
+                        response.status,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Usage authorization is unavailable",
+                    )
                 logger.warning(
                     "Usage %s failed attempt=%s/%s status=%s",
                     operation_name,
                     attempt,
-                    attempts,
+                    max_attempts,
                     response.status,
                 )
         except (ClientError, asyncio.TimeoutError) as exc:
@@ -207,8 +249,8 @@ async def post_signed_usage_request(
                 attempts,
                 type(exc).__name__,
             )
-        if attempt < attempts:
-            await asyncio.sleep(1)
+        if attempt < max_attempts:
+            await asyncio.sleep(min(0.5, 0.1 * (2 ** (attempt - 1))))
     logger.error("All attempts to %s usage failed", operation_name)
     return False
 
@@ -280,16 +322,26 @@ class UsageLimitClient:
         self,
         account_id: str | None,
         updates: list[dict[str, Any]],
+        *,
+        operation_id: str | None = None,
     ) -> bool:
         for update in updates:
             if (
                 set(update) != {"resource", "amount"}
                 or update.get("resource") not in ACCOUNT_USAGE_RESOURCES
+                or type(update.get("amount")) is not int
+                or int(update["amount"]) <= 0
+                or int(update["amount"]) > MAX_RESOURCE_VALUE
             ):
                 raise ValueError("Unsupported account usage update")
+        stable_operation_id = operation_id or f"usage:{uuid.uuid4().hex}"
         return await self.post_usage_request(
             "/internal/usage/increment",
-            {"account_id": account_id, "updates": updates},
+            {
+                "account_id": account_id,
+                "operation_id": stable_operation_id,
+                "updates": updates,
+            },
             "update",
         )
 
@@ -302,9 +354,9 @@ def usage_control(
     resource: str,
     *,
     enforce: Callable[[dict[str, Any], str, int], Awaitable[None]],
-    increment: Callable[[str | None, list[dict[str, Any]]], Awaitable[bool]],
+    increment: Callable[..., Awaitable[bool]],
 ) -> Callable[[Callable[_P, Awaitable[_R]]], Callable[_P, Awaitable[_R]]]:
-    """Build the common pre-enforce/post-increment async decorator."""
+    """Build an authoritative pre-consumption async quota decorator."""
 
     if resource not in ACCOUNT_USAGE_RESOURCES:
         raise ValueError("Unsupported account usage resource")
@@ -323,15 +375,26 @@ def usage_control(
                 except (TypeError, ValueError):
                     current_user = None
             if isinstance(current_user, dict):
-                await enforce(current_user, resource, 0)
-            result = await function(*args, **kwargs)
+                # JWT usage is a fast advisory only. Auth's transactional
+                # consumption below remains authoritative under concurrency.
+                await enforce(current_user, resource, 1)
             account_id = (
                 cast(str | None, current_user.get("account_id"))
                 if isinstance(current_user, dict)
                 else cast(str | None, getattr(current_user, "account_id", None))
             )
-            await increment(account_id, [{"resource": resource, "amount": 1}])
-            return result
+            operation_id = f"usage:{resource}:{uuid.uuid4().hex}"
+            committed = await increment(
+                account_id,
+                [{"resource": resource, "amount": 1}],
+                operation_id=operation_id,
+            )
+            if not committed:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Usage authorization is unavailable",
+                )
+            return await function(*args, **kwargs)
 
         return wrapper
 

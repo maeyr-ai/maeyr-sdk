@@ -38,6 +38,10 @@ class ViksaTransportError(ViksaError):
         self.request_url = request_url
 
 
+class ViksaStreamError(ViksaError):
+    """A successful streaming response violated the SDK event contract."""
+
+
 class ViksaApiError(ViksaError):
     """HTTP API error with parsed platform response metadata."""
 

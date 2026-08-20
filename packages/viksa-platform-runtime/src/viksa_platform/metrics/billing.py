@@ -11,7 +11,7 @@ import json
 import math
 import secrets
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Mapping
 
 from viksa_platform.metrics.constants import PREFIX_TOKEN_USAGE, entity_type_from_resource_type
@@ -39,12 +39,12 @@ def billing_ledger_descriptor(*, collection: str = "token_usage") -> dict[str, A
     return {
         "authority": "immutable_provider_call_ledger",
         "collection": collection,
-        "schema_version": "2",
+        "schema_version": "3",
         "currency": "USD",
         "cost_precision": "usd_nanos",
         "attribution_policy": "equal_integer_remainder_v1",
         "rollup_policy": "raw_ledger_only",
-        "billing_status_policy": "immutable_facts_recomputed_v2",
+        "billing_status_policy": "credential_source_recomputed_v3",
         "trace_role": "diagnostic_reconciliation_evidence",
     }
 
@@ -67,6 +67,8 @@ def pricing_contract_is_invoice_eligible(pricing: Any) -> bool:
 
 def effective_usage_billing_status(document: Mapping[str, Any]) -> str:
     """Recompute the authoritative status of one immutable ledger event."""
+    if document.get("credential_source") == "customer":
+        return "non_billable"
     has_cost = (
         document.get("cost_nanos_usd") is not None
         or document.get("cost_usd") is not None
@@ -185,6 +187,9 @@ def build_agent_allocations(document: Mapping[str, Any]) -> list[dict[str, Any]]
     else:
         total_parts = _split_integer(int(document.get("tokens_used") or 0), len(agent_ids))
     cost_parts = _split_integer(document.get("cost_nanos_usd"), len(agent_ids))
+    estimated_cost_parts = _split_integer(
+        document.get("estimated_cost_nanos_usd"), len(agent_ids)
+    )
     call_parts = _split_integer(1_000_000_000, len(agent_ids))
 
     return [
@@ -198,6 +203,8 @@ def build_agent_allocations(document: Mapping[str, Any]) -> list[dict[str, Any]]
             "tokens_used": total_parts[index],
             "cost_nanos_usd": cost_parts[index],
             "cost_usd": nanos_to_usd(cost_parts[index]),
+            "estimated_cost_nanos_usd": estimated_cost_parts[index],
+            "estimated_cost_usd": nanos_to_usd(estimated_cost_parts[index]),
             # Exact fractional-call allocation in billionths. This lets rows
             # grouped by agent reconcile to the physical provider-call count
             # without pretending a shared call happened once per participant.
@@ -220,10 +227,15 @@ def stable_usage_event_id(document: Mapping[str, Any]) -> tuple[str, str, bool]:
     provider = str(document.get("provider") or "").strip().lower()
     provider_request_id = str(document.get("provider_request_id") or "").strip()
     if provider_request_id:
-        key = explicit_key or f"provider:{provider or 'unknown'}:{provider_request_id}"
-        return explicit_id or f"{PREFIX_TOKEN_USAGE}-{_digest({'key': key})[:32]}", key, False
+        # Provider identity is authoritative. Never let a producer-supplied
+        # event ID or idempotency key fork one physical provider call into
+        # multiple billable ledger rows.
+        key = f"provider:{provider or 'unknown'}:{provider_request_id}"
+        return f"{PREFIX_TOKEN_USAGE}-{_digest({'key': key})[:32]}", key, False
     if explicit_key:
-        return explicit_id or f"{PREFIX_TOKEN_USAGE}-{_digest({'key': explicit_key})[:32]}", explicit_key, False
+        # The idempotency key, rather than a mutable transport event ID, owns
+        # replay identity when the provider exposes no request ID.
+        return f"{PREFIX_TOKEN_USAGE}-{_digest({'key': explicit_key})[:32]}", explicit_key, False
     activity_id = str(document.get("activity_id") or "").strip()
     sequence = document.get("call_sequence")
     if activity_id and sequence is not None and int(sequence) > 0:
@@ -236,7 +248,7 @@ def stable_usage_event_id(document: Mapping[str, Any]) -> tuple[str, str, bool]:
                 str(document.get("operation") or "llm.call"),
             )
         )
-        return explicit_id or f"{PREFIX_TOKEN_USAGE}-{_digest({'key': key})[:32]}", key, False
+        return f"{PREFIX_TOKEN_USAGE}-{_digest({'key': key})[:32]}", key, False
     fallback = explicit_id or f"{PREFIX_TOKEN_USAGE}-{secrets.token_hex(16)}"
     return fallback, f"legacy:{fallback}", True
 
@@ -328,8 +340,30 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
     doc.setdefault("entity_type", entity_type_from_resource_type(resource_type))
     doc.setdefault("entity_id", doc.get("resource_id"))
     doc["provider"] = str(doc.get("provider") or metadata.get("provider") or "unknown").lower()
-    doc["provider_request_id"] = doc.get("provider_request_id") or metadata.get("provider_request_id")
+    doc["provider_request_id"] = doc.get("provider_request_id") or metadata.get(
+        "provider_request_id"
+    )
     doc["service"] = doc.get("service") or metadata.get("service")
+
+    credential_source = str(
+        doc.get("credential_source") or metadata.get("credential_source") or "platform"
+    ).strip().lower()
+    if credential_source not in {"platform", "customer"}:
+        raise ValueError("credential_source must be platform or customer")
+    doc["credential_source"] = credential_source
+    # Producer booleans are not authoritative. Only the credentials selected
+    # by the universal runtime decide whether the call is chargeable.
+    doc["billable_to_customer"] = credential_source == "platform"
+    source_scope = str(
+        doc.get("llm_source_scope") or metadata.get("llm_source_scope") or "platform"
+    ).strip().lower()
+    if source_scope not in {"platform", "account", "organization", "project"}:
+        raise ValueError("llm_source_scope is invalid")
+    if credential_source == "customer" and source_scope == "platform":
+        raise ValueError("customer credentials require a tenant LLM source scope")
+    if credential_source == "platform" and source_scope != "platform":
+        raise ValueError("platform credentials require platform LLM source scope")
+    doc["llm_source_scope"] = source_scope
 
     pricing = doc.get("pricing")
     if pricing is not None and not isinstance(pricing, Mapping):
@@ -349,7 +383,9 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
     estimated = bool(doc.get("estimated") or pricing_is_estimate)
     doc["estimated"] = estimated
     if doc.get("usage_status") not in {"observed", "estimated", "unavailable", "reconciled"}:
-        doc["usage_status"] = "estimated" if estimated else ("observed" if total_i > 0 else "unavailable")
+        doc["usage_status"] = (
+            "estimated" if estimated else ("observed" if total_i > 0 else "unavailable")
+        )
     if "cost_nanos_usd" not in doc:
         doc["cost_nanos_usd"] = usd_to_nanos(doc.get("cost_usd"))
     elif doc["cost_nanos_usd"] is not None:
@@ -358,6 +394,38 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError("cost_nanos_usd must be non-negative")
     if doc.get("cost_usd") is None and doc.get("cost_nanos_usd") is not None:
         doc["cost_usd"] = nanos_to_usd(doc["cost_nanos_usd"])
+    if credential_source == "customer":
+        # Preserve the provider-equivalent estimate for analytics while the
+        # Viksa invoice amount is canonically zero.
+        estimated_nanos = doc.get("estimated_cost_nanos_usd")
+        if estimated_nanos is None:
+            estimated_nanos = doc.get("cost_nanos_usd")
+        if estimated_nanos is None:
+            estimated_nanos = usd_to_nanos(
+                doc.get("estimated_cost_usd") or doc.get("cost_usd")
+            )
+        if estimated_nanos is not None:
+            estimated_nanos = int(estimated_nanos)
+            if estimated_nanos < 0:
+                raise ValueError("estimated_cost_nanos_usd must be non-negative")
+        doc["estimated_cost_nanos_usd"] = estimated_nanos
+        doc["estimated_cost_usd"] = nanos_to_usd(estimated_nanos)
+        doc["provider_equivalent_cost_status"] = (
+            "priced" if estimated_nanos is not None else "unpriced"
+        )
+        doc["cost_nanos_usd"] = 0
+        doc["cost_usd"] = "0"
+    else:
+        estimated_nanos = doc.get("estimated_cost_nanos_usd")
+        if estimated_nanos is None:
+            estimated_nanos = usd_to_nanos(doc.get("estimated_cost_usd"))
+        if estimated_nanos is not None:
+            estimated_nanos = int(estimated_nanos)
+            if estimated_nanos < 0:
+                raise ValueError("estimated_cost_nanos_usd must be non-negative")
+        doc["estimated_cost_nanos_usd"] = estimated_nanos
+        doc["estimated_cost_usd"] = nanos_to_usd(estimated_nanos)
+        doc["provider_equivalent_cost_status"] = "not_applicable"
     doc["cost_status"] = "priced" if doc.get("cost_nanos_usd") is not None else "unpriced"
     doc["agent_allocations"] = build_agent_allocations(doc)
     doc["attribution_version"] = "agent-equal-v1"
@@ -369,9 +437,10 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
         doc.get("reconciliation_required")
         or needs_reconciliation
         or doc["usage_status"] == "unavailable"
-        or doc["cost_status"] == "unpriced"
+        or (credential_source == "platform" and doc["cost_status"] == "unpriced")
         or (
-            doc["cost_status"] == "priced"
+            credential_source == "platform"
+            and doc["cost_status"] == "priced"
             and not estimated
             and not pricing_contract_valid
         )

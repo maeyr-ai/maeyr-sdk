@@ -3,7 +3,13 @@ import json
 import httpx
 import pytest
 
-from viksa_ai.client import ViksaClient, ViksaNotFoundError
+from viksa_ai.client import (
+    ViksaClient,
+    ViksaNotFoundError,
+    ViksaServerError,
+    ViksaStreamError,
+)
+from viksa_ai.client.config import RetryConfig
 from viksa_ai.models.agent import AgentCreationRequest, AgentDeletionStatus
 
 
@@ -11,6 +17,43 @@ def test_builder_sdk_exposes_no_direct_cross_org_share_client() -> None:
     client = ViksaClient("token", base_url="https://api.test")
 
     assert not hasattr(client.builder.agents, "share")
+
+
+def test_sse_decoder_supports_multiline_events_and_done_marker() -> None:
+    response = httpx.Response(
+        200,
+        text=': keepalive\ndata: {"type": "result",\ndata: "ok": true}\n\ndata: [DONE]\n\n',
+    )
+
+    assert list(ViksaClient.iter_sse_lines(response)) == [
+        {"type": "result", "ok": True}
+    ]
+
+
+def test_sse_decoder_rejects_malformed_events_instead_of_losing_them() -> None:
+    response = httpx.Response(200, text="data: {broken}\n\n")
+
+    with pytest.raises(ViksaStreamError, match="malformed JSON"):
+        list(ViksaClient.iter_sse_lines(response))
+
+
+@pytest.mark.asyncio
+async def test_authenticated_async_stream_uses_strict_sse_framing() -> None:
+    transport = httpx.MockTransport(
+        lambda _request: httpx.Response(
+            200,
+            text='data: {"type": "delta", "text": "hello"}\n\ndata: [DONE]\n\n',
+        )
+    )
+    async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
+        client = ViksaClient("token", base_url="https://api.test")
+        client._transport._async_client = http
+        events = [
+            event
+            async for event in client._astream("GET", "/chat", "/events")
+        ]
+
+    assert events == [{"type": "delta", "text": "hello"}]
 
 
 @pytest.mark.asyncio
@@ -174,3 +217,57 @@ async def test_agent_deploy_uses_canonical_route_without_redirect():
     assert len(captured) == 1
     assert captured[0].method == "POST"
     assert captured[0].url.path == "/builder/deploy"
+
+
+@pytest.mark.asyncio
+async def test_mutation_without_idempotency_key_is_not_retried_after_503():
+    attempts = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(503, json={"detail": "upstream unavailable"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
+        client = ViksaClient(
+            "token",
+            base_url="https://api.test",
+            retry=RetryConfig(max_retries=3, backoff_factor=0),
+        )
+        client._transport._async_client = http
+        with pytest.raises(ViksaServerError):
+            await client.request("POST", "/builder", "/build", json={"agent_id": "AI-1"})
+
+    assert attempts == 1
+
+
+@pytest.mark.asyncio
+async def test_mutation_with_idempotency_key_retries_transient_503():
+    attempts = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(503, json={"detail": "upstream unavailable"})
+        return httpx.Response(200, json={"status": "scheduled"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
+        client = ViksaClient(
+            "token",
+            base_url="https://api.test",
+            retry=RetryConfig(max_retries=3, backoff_factor=0),
+        )
+        client._transport._async_client = http
+        result = await client.request(
+            "POST",
+            "/builder",
+            "/build",
+            json={"agent_id": "AI-1"},
+            headers={"Idempotency-Key": "build-AI-1-v1"},
+        )
+
+    assert result == {"status": "scheduled"}
+    assert attempts == 2

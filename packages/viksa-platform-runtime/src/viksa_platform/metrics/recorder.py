@@ -35,6 +35,7 @@ _automatically_started = False
 _flush_handler: FlushHandler | None = None
 _memory_dropped = 0
 _flush_failures = 0
+_allow_memory_fallback = True
 
 
 def _append_memory(doc: dict[str, Any]) -> bool:
@@ -60,6 +61,25 @@ def configure_recorder(flush_handler: FlushHandler | None) -> None:
     """Set the committed batch sink during service startup."""
     global _flush_handler
     _flush_handler = flush_handler
+
+
+def configure_delivery_policy(*, allow_memory_fallback: bool) -> None:
+    """Select whether process-local memory may acknowledge usage acceptance.
+
+    Billing-critical services must disable this fallback. A process-local
+    queue cannot survive a crash and therefore is not a durable acceptance
+    boundary.
+    """
+    global _allow_memory_fallback
+    _allow_memory_fallback = bool(allow_memory_fallback)
+
+
+async def _accept_event(doc: dict[str, Any]) -> None:
+    if await enqueue_event(doc):
+        return
+    if _allow_memory_fallback and _append_memory(doc):
+        return
+    raise UsageDeliveryRejected("token usage event was not durably accepted")
 
 
 async def record_usage(
@@ -133,7 +153,8 @@ async def record_usage(
         "estimated": estimated,
         "model": model,
         "provider": base.get("provider") or resolved_metadata.get("provider") or "unknown",
-        "provider_request_id": base.get("provider_request_id") or resolved_metadata.get("provider_request_id"),
+        "provider_request_id": base.get("provider_request_id")
+        or resolved_metadata.get("provider_request_id"),
         "provider_operation": base.get("provider_operation"),
         "idempotency_key": base.get("idempotency_key"),
         "usage_status": base.get("usage_status"),
@@ -143,14 +164,19 @@ async def record_usage(
         "cost_nanos_usd": base.get("cost_nanos_usd"),
         "pricing": base.get("pricing"),
         "pricing_version": base.get("pricing_version"),
+        "credential_source": base.get("credential_source")
+        or resolved_metadata.get("credential_source"),
+        "llm_source_scope": base.get("llm_source_scope")
+        or resolved_metadata.get("llm_source_scope"),
+        "estimated_cost_usd": base.get("estimated_cost_usd"),
+        "estimated_cost_nanos_usd": base.get("estimated_cost_nanos_usd"),
         "metadata": resolved_metadata or None,
         "resource_refs": base.get("resource_refs") or None,
         "created_at": now,
         "date_bucket": now.strftime("%Y-%m-%d"),
     }
     doc = canonicalize_usage_event(doc)
-    if not await enqueue_event(doc) and not _append_memory(doc):
-        raise UsageDeliveryRejected("token usage event was rejected by every queue")
+    await _accept_event(doc)
     if not _running and _flush_handler is not None:
         _ensure_flush_worker(wake=False, automatic=True)
     else:
@@ -209,8 +235,7 @@ async def ingest_events(events: list[dict[str, Any]]) -> None:
                 or None
             )
         doc = canonicalize_usage_event(doc)
-        if not await enqueue_event(doc) and not _append_memory(doc):
-            raise UsageDeliveryRejected("token usage event was rejected by every queue")
+        await _accept_event(doc)
     _signal_flush()
 
 
@@ -352,12 +377,14 @@ def get_recorder_stats() -> dict[str, Any]:
         "worker_active": _flush_task is not None and not _flush_task.done(),
         "memory_dropped": _memory_dropped,
         "flush_failures": _flush_failures,
+        "allow_memory_fallback": _allow_memory_fallback,
         **get_transport_stats(),
     }
 
 
 __all__ = [
     "configure_recorder",
+    "configure_delivery_policy",
     "get_recorder_stats",
     "ingest_events",
     "record_from_context",

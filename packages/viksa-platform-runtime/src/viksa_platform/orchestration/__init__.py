@@ -1,4 +1,4 @@
-"""Chat's canonical provider-agnostic orchestration engine.
+"""Viksa's canonical provider-agnostic orchestration engine.
 
 A provider-agnostic native tool-calling harness shared by
 chat-service and volt-engine-service. The model is given real OpenAI ``tools``
@@ -10,8 +10,8 @@ results back as ``tool`` messages until the model returns a final answer.
 This package is PURE: it must not import any service-specific modules. Host
 services inject behavior via the small callables/protocols in ``protocols.py``.
 
-Source of truth lives in ``devops/shared/orchestration`` and is rsync'd into
-each service's ``common/orchestration`` by ``devops/scripts/sync-orchestration.sh``.
+This package is the single source of truth. Service-local orchestration modules
+are compatibility facades and must preserve object identity with this package.
 """
 
 from __future__ import annotations

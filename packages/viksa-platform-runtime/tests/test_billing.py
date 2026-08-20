@@ -1,16 +1,16 @@
 import pytest
 
-from viksa_platform.metrics.billing import (
-    billing_ledger_descriptor,
-    canonicalize_usage_event,
-    effective_usage_billing_status,
-)
 from viksa_platform.execution import token_cost
 from viksa_platform.execution.token_cost import (
     ModelPrice,
     TokenDetailPrice,
     UnitPrice,
     compute_usage_cost_usd,
+)
+from viksa_platform.metrics.billing import (
+    billing_ledger_descriptor,
+    canonicalize_usage_event,
+    effective_usage_billing_status,
 )
 
 
@@ -49,6 +49,28 @@ def test_provider_request_identity_is_stable_across_delivery_retries():
     assert first["payload_fingerprint"] == replay["payload_fingerprint"]
     assert first["idempotency_key"] == "provider:openai:resp_123"
     assert first["reconciliation_required"] is False
+
+
+def test_provider_request_identity_cannot_be_forked_by_producer_ids():
+    canonical = canonicalize_usage_event(_event())
+    forged = canonicalize_usage_event(
+        _event(_id="TU-FORGED", idempotency_key="producer-controlled")
+    )
+
+    assert forged["_id"] == canonical["_id"]
+    assert forged["idempotency_key"] == "provider:openai:resp_123"
+
+
+def test_explicit_idempotency_identity_cannot_be_forked_by_event_id():
+    first = canonicalize_usage_event(
+        _event(provider_request_id=None, _id="TU-ONE", idempotency_key="attempt-1")
+    )
+    replay = canonicalize_usage_event(
+        _event(provider_request_id=None, _id="TU-TWO", idempotency_key="attempt-1")
+    )
+
+    assert replay["_id"] == first["_id"]
+    assert replay["idempotency_key"] == "attempt-1"
 
 
 def test_agent_allocations_reconcile_exactly_without_duplication():
@@ -210,8 +232,8 @@ def test_read_time_status_ignores_forged_persisted_billable_flag():
 def test_ledger_contract_declares_fact_based_status_recomputation():
     descriptor = billing_ledger_descriptor()
 
-    assert descriptor["schema_version"] == "2"
-    assert descriptor["billing_status_policy"] == "immutable_facts_recomputed_v2"
+    assert descriptor["schema_version"] == "3"
+    assert descriptor["billing_status_policy"] == "credential_source_recomputed_v3"
 
 
 def test_special_token_contract_deducts_base_tokens_exactly_once(monkeypatch):
@@ -332,3 +354,55 @@ def test_detail_larger_than_provider_total_requires_reconciliation(monkeypatch):
     assert result.uncovered_dimensions == (
         "token_details.prompt_cached_tokens:exceeds_prompt",
     )
+
+
+def test_customer_llm_usage_is_visible_but_never_billable():
+    document = canonicalize_usage_event(
+        _event(
+            provider_request_id="req-byollm",
+            credential_source="customer",
+            llm_source_scope="project",
+            cost_nanos_usd=None,
+            cost_usd="0.012345678",
+            pricing=None,
+        )
+    )
+
+    assert document["billable_to_customer"] is False
+    assert document["billing_status"] == "non_billable"
+    assert document["cost_nanos_usd"] == 0
+    assert document["cost_usd"] == "0"
+    assert document["estimated_cost_nanos_usd"] == 12_345_678
+    assert document["estimated_cost_usd"] == "0.012345678"
+    assert document["provider_equivalent_cost_status"] == "priced"
+    assert document["reconciliation_required"] is False
+
+
+def test_unknown_customer_model_is_non_billable_without_claiming_zero_provider_cost():
+    document = canonicalize_usage_event(
+        _event(
+            provider_request_id="req-byollm-unknown",
+            credential_source="customer",
+            llm_source_scope="organization",
+            cost_nanos_usd=None,
+            cost_usd=None,
+            pricing=None,
+        )
+    )
+
+    assert document["billing_status"] == "non_billable"
+    assert document["cost_nanos_usd"] == 0
+    assert document["provider_equivalent_cost_status"] == "unpriced"
+    assert document["estimated_cost_nanos_usd"] is None
+    assert document["reconciliation_required"] is False
+
+
+def test_producer_cannot_mark_platform_usage_non_billable():
+    document = canonicalize_usage_event(
+        _event(
+            credential_source="platform",
+            llm_source_scope="platform",
+            billable_to_customer=False,
+        )
+    )
+    assert document["billable_to_customer"] is True

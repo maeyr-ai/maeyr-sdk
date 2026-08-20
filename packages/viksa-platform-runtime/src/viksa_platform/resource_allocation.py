@@ -44,6 +44,16 @@ class HierarchicalLimit:
         return not self.violations
 
 
+class ResourceMutationRejected(RuntimeError):
+    """A quota authority definitively rejected a resource mutation."""
+
+    def __init__(self, *, status_code: int, action: str, error_code: str | None = None):
+        self.status_code = status_code
+        self.action = action
+        self.error_code = error_code
+        super().__init__(f"Auth quota {action} was rejected with HTTP {status_code}")
+
+
 _PROJECT_RESOURCES = (
     ProjectResource("agents", "max_agents", "agents_count"),
     ProjectResource("triggers", "max_triggers", "triggers_count"),
@@ -208,6 +218,7 @@ __all__ = [
     "PROJECT_ALLOCATION_KEYS",
     "PROJECT_RESOURCES",
     "ProjectResource",
+    "ResourceMutationRejected",
     "RESOURCE_TO_ALLOCATION_KEY",
     "RESOURCE_TO_USAGE_KEY",
     "UNLIMITED",

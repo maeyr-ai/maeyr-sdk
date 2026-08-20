@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any, AsyncIterator, Dict, Iterator, Literal, Optional, cast
 
@@ -31,6 +30,7 @@ from viksa_ai.client.errors import (
 from viksa_ai.client.marketplace import MarketplaceClient
 from viksa_ai.client.pulse import PulseClient
 from viksa_ai.client.scheduler import SchedulerClient
+from viksa_ai.client.sse import JsonSseDecoder
 from viksa_ai.client.transport import HttpTransport
 from viksa_ai.client.webhook import WebhookClient
 from viksa_ai.client.workflow import WorkflowClient
@@ -399,16 +399,16 @@ class ViksaClient:
 
     @staticmethod
     def iter_sse_lines(response: httpx.Response) -> Iterator[Dict[str, Any]]:
+        decoder = JsonSseDecoder()
         for line in response.iter_lines():
-            if not line or not line.startswith("data:"):
-                continue
-            payload = line[5:].strip()
-            if payload == "[DONE]":
+            event = decoder.feed(line)
+            if event is not None:
+                yield event
+            if decoder.finished:
                 break
-            try:
-                yield json.loads(payload)
-            except json.JSONDecodeError:
-                continue
+        event = decoder.finish()
+        if event is not None:
+            yield event
 
     async def _astream(
         self,
@@ -427,15 +427,15 @@ class ViksaClient:
                 if response.status_code >= 400:
                     await response.aread()
                     raise_for_response(response, service=service, method=method, path=path)
+                decoder = JsonSseDecoder()
                 async for line in response.aiter_lines():
-                    if not line or not line.startswith("data:"):
-                        continue
-                    payload = line[5:].strip()
-                    if payload == "[DONE]":
+                    event = decoder.feed(line)
+                    if event is not None:
+                        yield event
+                    if decoder.finished:
                         break
-                    try:
-                        yield json.loads(payload)
-                    except json.JSONDecodeError:
-                        continue
+                event = decoder.finish()
+                if event is not None:
+                    yield event
         except httpx.HTTPError as exc:
             raise wrap_transport_error(exc, method=method, url=url) from exc

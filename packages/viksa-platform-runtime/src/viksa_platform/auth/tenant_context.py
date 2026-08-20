@@ -5,7 +5,9 @@ from __future__ import annotations
 from logging import getLogger
 from typing import Any, Dict, Mapping, Optional, Tuple
 
-from fastapi import Request
+from fastapi import HTTPException, Request, status
+
+from viksa_platform.auth.permission_checker import has_permission
 
 logger = getLogger("[viksa_platform.auth.tenant_context]")
 
@@ -43,12 +45,18 @@ def resolve_tenant_ids(
     org_id: Optional[str] = None,
     project_id: Optional[str] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
-    """Priority: explicit arg → query param → tenant header → auth session."""
+    """Resolve a request tenant without allowing post-auth context switching.
+
+    Auth validates the credential against the tenant headers before a protected
+    handler runs.  Query/path values must therefore agree with that validated
+    context.  Letting a query parameter override it would turn a permission in
+    project A into a data-plane query against project B.
+    """
     header_org = _header(request, "x-tenant-org-id")
     header_project = _header(request, "x-tenant-project-id")
     query_org = _query_param(request, "org_id")
     query_project = _query_param(request, "project_id")
-    return resolve_tenant_from_sources(
+    resolved = resolve_tenant_from_sources(
         current_user,
         org_id=org_id,
         project_id=project_id,
@@ -56,6 +64,105 @@ def resolve_tenant_ids(
         query_project=query_project,
         header_org=header_org,
         header_project=header_project,
+    )
+    return require_validated_tenant(current_user, *resolved)
+
+
+def require_validated_tenant(
+    current_user: Mapping[str, Any],
+    org_id: Optional[str],
+    project_id: Optional[str],
+) -> Tuple[Optional[str], Optional[str]]:
+    """Reject a tenant target that differs from Auth's validated context."""
+    validated_org = str(current_user.get("org_id") or "").strip() or None
+    validated_project = str(current_user.get("project_id") or "").strip() or None
+    requested_org = str(org_id or "").strip() or None
+    requested_project = str(project_id or "").strip() or None
+    if validated_org and requested_org and requested_org != validated_org:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant organization is outside the authorized context",
+        )
+    if validated_project and requested_project and requested_project != validated_project:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant project is outside the authorized context",
+        )
+    return requested_org or validated_org, requested_project or validated_project
+
+
+def permission_data_scope(
+    current_user: Mapping[str, Any],
+    module: str,
+    action: str,
+    *,
+    org_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Return the widest Mongo data scope proved by the live Auth decision.
+
+    The returned filter is safe to combine with a repository query.  Account
+    grants may span the account database, organization grants remain in the
+    authenticated organization, and context grants remain in the exact
+    authenticated project.  Requested filters can narrow a grant but can
+    never broaden it.
+    """
+    access = current_user.get("access")
+    if not isinstance(access, dict):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission scope is unavailable",
+        )
+    requested_org = str(org_id or "").strip() or None
+    requested_project = str(project_id or "").strip() or None
+    validated_org = str(current_user.get("org_id") or "").strip() or None
+    validated_project = str(current_user.get("project_id") or "").strip() or None
+
+    if has_permission(access, module, action, grant_scope="account"):
+        result: Dict[str, Any] = {}
+        if requested_org:
+            result["org_id"] = requested_org
+        if requested_project:
+            result["project_id"] = requested_project
+        return result
+
+    if has_permission(access, module, action, grant_scope="organization"):
+        if not validated_org:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authorized organization context is required",
+            )
+        if requested_org and requested_org != validated_org:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization filter exceeds the authorized scope",
+            )
+        result = {"org_id": validated_org}
+        if requested_project:
+            result["project_id"] = requested_project
+        return result
+
+    if has_permission(access, module, action, grant_scope="context"):
+        if not validated_org or not validated_project:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authorized project context is required",
+            )
+        if requested_org and requested_org != validated_org:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization filter exceeds the authorized scope",
+            )
+        if requested_project and requested_project != validated_project:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Project filter exceeds the authorized scope",
+            )
+        return {"org_id": validated_org, "project_id": validated_project}
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Permission denied",
     )
 
 
@@ -125,6 +232,7 @@ def apply_ws_tenant(
         payload_org=data.get("org_id"),
         payload_project=data.get("project_id"),
     )
+    org_id, project_id = require_validated_tenant(user, org_id, project_id)
     return merge_tenant_into_user(user, org_id=org_id, project_id=project_id)
 
 

@@ -8,6 +8,7 @@ from viksa_platform.resource_allocation import (
     PROJECT_RESOURCES,
     RESOURCE_TO_ALLOCATION_KEY,
     RESOURCE_TO_USAGE_KEY,
+    ResourceMutationRejected,
     effective_child_limit,
     effective_project_limit,
     resolve_hierarchical_limit,
@@ -103,3 +104,16 @@ def test_retained_operation_id_rejects_invalid_inputs(
 ) -> None:
     with pytest.raises(ValueError):
         retained_operation_id(kind, entity_id)
+
+
+def test_resource_mutation_rejection_preserves_machine_readable_context() -> None:
+    error = ResourceMutationRejected(
+        status_code=409,
+        action="reserve",
+        error_code="quota_exhausted",
+    )
+
+    assert error.status_code == 409
+    assert error.action == "reserve"
+    assert error.error_code == "quota_exhausted"
+    assert str(error) == "Auth quota reserve was rejected with HTTP 409"

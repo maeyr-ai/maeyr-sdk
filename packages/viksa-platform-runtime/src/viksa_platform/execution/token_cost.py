@@ -37,7 +37,7 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from logging import getLogger
 from types import MappingProxyType
 from typing import Any, Dict, Mapping, Optional, Tuple

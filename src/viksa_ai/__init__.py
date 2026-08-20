@@ -10,6 +10,7 @@ __all__ = [
     "ViksaClient",
     "ViksaNotFoundError",
     "ViksaRateLimitError",
+    "ViksaStreamError",
     "ViksaTransportError",
     "ViksaValidationError",
     "WebhookClient",
@@ -31,6 +32,7 @@ def __getattr__(name: str) -> Any:
         ("ViksaAuthenticationError", "ViksaAuthenticationError"),
         ("ViksaNotFoundError", "ViksaNotFoundError"),
         ("ViksaRateLimitError", "ViksaRateLimitError"),
+        ("ViksaStreamError", "ViksaStreamError"),
         ("ViksaTransportError", "ViksaTransportError"),
         ("ViksaValidationError", "ViksaValidationError"),
     ):
@@ -48,6 +50,7 @@ if TYPE_CHECKING:
         ViksaClient,
         ViksaNotFoundError,
         ViksaRateLimitError,
+        ViksaStreamError,
         ViksaTransportError,
         ViksaValidationError,
         WebhookClient,

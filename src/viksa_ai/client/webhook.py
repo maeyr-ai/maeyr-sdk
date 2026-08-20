@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any, AsyncIterator, Dict, Optional, cast
 
 import httpx
 
 from viksa_ai._constants import DEFAULT_BASE_URL, SERVICE_PATHS
 from viksa_ai.client.errors import raise_for_response, wrap_transport_error
+from viksa_ai.client.sse import JsonSseDecoder
 
 
 class WebhookClient:
@@ -63,16 +63,16 @@ class WebhookClient:
                     if response.status_code >= 400:
                         await response.aread()
                         raise_for_response(response, service="chat", method="POST", path=path)
+                    decoder = JsonSseDecoder()
                     async for line in response.aiter_lines():
-                        if not line or not line.startswith("data:"):
-                            continue
-                        data = line[5:].strip()
-                        if data == "[DONE]":
+                        event = decoder.feed(line)
+                        if event is not None:
+                            yield event
+                        if decoder.finished:
                             break
-                        try:
-                            yield json.loads(data)
-                        except json.JSONDecodeError:
-                            continue
+                    event = decoder.finish()
+                    if event is not None:
+                        yield event
         except httpx.HTTPError as exc:
             raise wrap_transport_error(exc, method="POST", url=url) from exc
 

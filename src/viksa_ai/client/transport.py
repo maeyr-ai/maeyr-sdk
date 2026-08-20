@@ -28,6 +28,23 @@ def _should_retry_status(status: int, config: RetryConfig) -> bool:
     return status in config.retry_status_codes
 
 
+def _can_retry_request(method: str, headers: Dict[str, str]) -> bool:
+    """Return whether repeating this request cannot silently duplicate work.
+
+    Reads are safe to repeat. Mutations are retried only when the caller has
+    supplied an idempotency key that the platform can bind to the operation.
+    A timeout or gateway error does not prove that a mutation was not already
+    committed by the upstream service.
+    """
+
+    if method.strip().upper() in {"GET", "HEAD", "OPTIONS"}:
+        return True
+    return any(
+        key.casefold() == "idempotency-key" and bool(str(value).strip())
+        for key, value in headers.items()
+    )
+
+
 class HttpTransport:
     """Shared async/sync HTTP execution for :class:`ViksaClient`."""
 
@@ -69,10 +86,15 @@ class HttpTransport:
         return self._sync_client
 
     def update_headers(self, headers: Dict[str, str]) -> None:
+        removed = set(self.headers).difference(headers)
         self.headers = dict(headers)
         if self._async_client is not None:
+            for key in removed:
+                self._async_client.headers.pop(key, None)
             self._async_client.headers.update(self._merge_headers())
         if self._sync_client is not None:
+            for key in removed:
+                self._sync_client.headers.pop(key, None)
             self._sync_client.headers.update(self._merge_headers())
 
     async def aclose(self) -> None:
@@ -105,6 +127,8 @@ class HttpTransport:
         url = f"{self.base_url}{prefix}{path}"
         retry_cfg = retry or self.config.retry
         last_exc: Optional[BaseException] = None
+        request_headers = self._merge_headers(headers)
+        can_retry = _can_retry_request(method, request_headers)
 
         for attempt in range(retry_cfg.max_retries + 1):
             try:
@@ -114,11 +138,15 @@ class HttpTransport:
                     url,
                     json=json,
                     params=params,
-                    headers=self._merge_headers(headers) if headers else None,
+                    headers=request_headers,
                 )
             except httpx.HTTPError as exc:
                 last_exc = wrap_transport_error(exc, method=method, url=url)
-                if retry_cfg.retry_on_connection_errors and attempt < retry_cfg.max_retries:
+                if (
+                    can_retry
+                    and retry_cfg.retry_on_connection_errors
+                    and attempt < retry_cfg.max_retries
+                ):
                     await asyncio.sleep(_compute_backoff(attempt, retry_cfg, None))
                     continue
                 raise last_exc from exc
@@ -133,13 +161,18 @@ class HttpTransport:
                 except ViksaRateLimitError as rate_exc:
                     retry_after = rate_exc.retry_after
                     last_exc = rate_exc
-                    if attempt < retry_cfg.max_retries and _should_retry_status(429, retry_cfg):
+                    if (
+                        can_retry
+                        and attempt < retry_cfg.max_retries
+                        and _should_retry_status(429, retry_cfg)
+                    ):
                         await asyncio.sleep(_compute_backoff(attempt, retry_cfg, retry_after))
                         continue
                     raise
 
             if (
-                _should_retry_status(response.status_code, retry_cfg)
+                can_retry
+                and _should_retry_status(response.status_code, retry_cfg)
                 and attempt < retry_cfg.max_retries
             ):
                 await asyncio.sleep(_compute_backoff(attempt, retry_cfg, retry_after))
@@ -172,6 +205,8 @@ class HttpTransport:
         url = f"{self.base_url}{prefix}{path}"
         retry_cfg = retry or self.config.retry
         last_exc: Optional[BaseException] = None
+        request_headers = self._merge_headers(headers)
+        can_retry = _can_retry_request(method, request_headers)
 
         for attempt in range(retry_cfg.max_retries + 1):
             try:
@@ -181,11 +216,15 @@ class HttpTransport:
                     url,
                     json=json,
                     params=params,
-                    headers=self._merge_headers(headers) if headers else None,
+                    headers=request_headers,
                 )
             except httpx.HTTPError as exc:
                 last_exc = wrap_transport_error(exc, method=method, url=url)
-                if retry_cfg.retry_on_connection_errors and attempt < retry_cfg.max_retries:
+                if (
+                    can_retry
+                    and retry_cfg.retry_on_connection_errors
+                    and attempt < retry_cfg.max_retries
+                ):
                     time.sleep(_compute_backoff(attempt, retry_cfg, None))
                     continue
                 raise last_exc from exc
@@ -200,13 +239,18 @@ class HttpTransport:
                 except ViksaRateLimitError as rate_exc:
                     retry_after = rate_exc.retry_after
                     last_exc = rate_exc
-                    if attempt < retry_cfg.max_retries and _should_retry_status(429, retry_cfg):
+                    if (
+                        can_retry
+                        and attempt < retry_cfg.max_retries
+                        and _should_retry_status(429, retry_cfg)
+                    ):
                         time.sleep(_compute_backoff(attempt, retry_cfg, retry_after))
                         continue
                     raise
 
             if (
-                _should_retry_status(response.status_code, retry_cfg)
+                can_retry
+                and _should_retry_status(response.status_code, retry_cfg)
                 and attempt < retry_cfg.max_retries
             ):
                 time.sleep(_compute_backoff(attempt, retry_cfg, retry_after))

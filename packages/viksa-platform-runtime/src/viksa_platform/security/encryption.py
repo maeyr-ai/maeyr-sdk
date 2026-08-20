@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import secrets
 from collections.abc import Callable, Mapping
@@ -58,6 +59,49 @@ def generate_recovery_key(
     return recovery_key, hash_passphrase(recovery_key)
 
 
+def fingerprint_and_zero_secret_buffer(secret: bytearray) -> str:
+    """Fingerprint a transient secret and always erase the mutable input buffer."""
+
+    try:
+        return hashlib.sha256(bytes(secret)).hexdigest()
+    finally:
+        for index in range(len(secret)):
+            secret[index] = 0
+
+
+def get_aws_kms_client(
+    kms_config: Mapping[str, Any],
+    *,
+    client_factory: Callable[..., Any],
+) -> Any:
+    """Build an AWS KMS client without making the shared runtime depend on boto3."""
+
+    key_arn = kms_config.get("key_arn")
+    if not isinstance(key_arn, str) or not key_arn.strip():
+        raise ValueError("key_arn is required for AWS KMS")
+    region = kms_config.get("region")
+    if not region:
+        parts = key_arn.split(":")
+        region = parts[3] if len(parts) >= 4 else None
+
+    access_key_id = kms_config.get("access_key_id")
+    secret_access_key = kms_config.get("secret_access_key")
+    session_token = kms_config.get("session_token")
+    if bool(access_key_id) != bool(secret_access_key):
+        raise ValueError(
+            "access_key_id and secret_access_key must be provided together for AWS KMS"
+        )
+    if access_key_id and secret_access_key:
+        return client_factory(
+            "kms",
+            region_name=region,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            aws_session_token=session_token,
+        )
+    return client_factory("kms", region_name=region)
+
+
 def get_gcp_kms_client(kms_config: Mapping[str, Any]) -> Any:
     """Build a GCP KMS client from validated configuration or ambient identity."""
 
@@ -84,6 +128,8 @@ def get_gcp_kms_client(kms_config: Mapping[str, Any]) -> Any:
 __all__ = [
     "RequiredPrimaryKeyMixin",
     "derive_fernet_key",
+    "fingerprint_and_zero_secret_buffer",
+    "get_aws_kms_client",
     "generate_recovery_key",
     "get_gcp_kms_client",
 ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any, Dict, Optional
 
@@ -13,6 +14,8 @@ logger = get_logger("[viksa_platform.directory.invoker_cache]")
 INVOKER_TTL_SECONDS = 300
 SCHEMA_TTL_SECONDS = 3600
 NEGATIVE_INVOKER_TTL_SECONDS = 60
+CHANNEL_ACCESS_TTL_SECONDS = 300
+NEGATIVE_CHANNEL_ACCESS_TTL_SECONDS = 45
 
 _CACHE_GENERATION_UNSET = object()
 _VERSIONED_CACHE_WRITE = """
@@ -175,6 +178,82 @@ def _identity_key(
         f"volt:project_user_identity:{account_id}:{org_id}:{project_id}:"
         f"{channel}:{external_user_id}"
     )
+
+
+def _channel_access_key(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    channel: str,
+    subject: str,
+) -> str:
+    # Connector identities are customer PII. Keep them out of Redis key names
+    # while retaining an O(1), tenant-isolated lookup.
+    digest = hashlib.sha256(subject.encode("utf-8")).hexdigest()
+    return (
+        f"volt:channel_access:{account_id}:{org_id}:{project_id}:"
+        f"{channel}:{digest}"
+    )
+
+
+async def get_channel_access_cache(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    channel: str,
+    subject: str,
+) -> Optional[Dict[str, Any]]:
+    r = await _client()
+    if not r:
+        return None
+    try:
+        return await _get_cache_value(
+            r,
+            generation_key=_generation_key(account_id, org_id, project_id),
+            cache_key=_channel_access_key(
+                account_id,
+                org_id,
+                project_id,
+                channel,
+                subject,
+            ),
+        )
+    except Exception as exc:
+        logger.debug("channel access cache get failed: %s", exc)
+        return None
+
+
+async def set_channel_access_cache(
+    account_id: str,
+    org_id: str,
+    project_id: str,
+    channel: str,
+    subject: str,
+    payload: Dict[str, Any],
+    *,
+    ttl_seconds: int = CHANNEL_ACCESS_TTL_SECONDS,
+    expected_generation: int | None | object = _CACHE_GENERATION_UNSET,
+) -> None:
+    r = await _client()
+    if not r:
+        return
+    try:
+        await _set_cache_value(
+            r,
+            generation_key=_generation_key(account_id, org_id, project_id),
+            cache_key=_channel_access_key(
+                account_id,
+                org_id,
+                project_id,
+                channel,
+                subject,
+            ),
+            value=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+            ttl_seconds=max(1, ttl_seconds),
+            expected_generation=expected_generation,
+        )
+    except Exception as exc:
+        logger.debug("channel access cache set failed: %s", exc)
 
 
 async def get_invoker_cache(

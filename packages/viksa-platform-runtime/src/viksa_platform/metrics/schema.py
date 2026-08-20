@@ -32,7 +32,10 @@ class TokenUsageEvent(BaseModel):
     tokens_used: int = 0
     cost_usd: float | None = None
     cost_nanos_usd: int | None = None
+    estimated_cost_usd: float | None = None
+    estimated_cost_nanos_usd: int | None = None
     cost_status: str | None = None
+    provider_equivalent_cost_status: str | None = None
     billing_status: str | None = None
     pricing_version: str | None = None
     pricing: dict[str, Any] | None = None
@@ -40,6 +43,9 @@ class TokenUsageEvent(BaseModel):
     provider: str = "unknown"
     provider_request_id: str | None = None
     provider_operation: str | None = None
+    credential_source: str = "platform"
+    llm_source_scope: str = "platform"
+    billable_to_customer: bool = True
     usage_status: str | None = None
     idempotency_key: str | None = None
     payload_fingerprint: str | None = None

@@ -19,13 +19,17 @@ from viksa_platform.metrics.constants import (
 logger = logging.getLogger("platform_metrics.transport")
 
 HttpFallback = Callable[[dict[str, Any]], Awaitable[Any]]
+DurableFallback = Callable[[dict[str, Any]], Awaitable[bool]]
 
 _redis_client: Any | None = None
 _use_redis = False
 _http_fallback: HttpFallback | None = None
+_durable_fallback: DurableFallback | None = None
 _recovery_required = False
 _redis_failures = 0
 _redis_capacity_rejections = 0
+_durable_fallback_accepts = 0
+_durable_fallback_failures = 0
 
 _BOUNDED_LPUSH = """
 local current = redis.call('LLEN', KEYS[1])
@@ -50,12 +54,15 @@ class _ReservedEvent(dict[str, Any]):
 def configure_transport(
     redis_client: Any | None = None,
     http_fallback: HttpFallback | None = None,
+    durable_fallback: DurableFallback | None = None,
 ) -> None:
     """Configure transport backends during service startup."""
-    global _redis_client, _use_redis, _http_fallback, _recovery_required
+    global _redis_client, _use_redis, _http_fallback, _durable_fallback
+    global _recovery_required
     _redis_client = redis_client
     _use_redis = redis_client is not None
     _http_fallback = http_fallback
+    _durable_fallback = durable_fallback
     _recovery_required = _use_redis
 
 
@@ -121,16 +128,34 @@ async def _bounded_enqueue(raw: str) -> bool:
 
 async def enqueue_event(doc: dict[str, Any]) -> bool:
     """Persist an event without spawning a background task."""
-    global _redis_failures
+    global _durable_fallback_accepts, _durable_fallback_failures, _redis_failures
     if _use_redis and _redis_client:
         try:
-            return await _bounded_enqueue(_doc_to_redis(doc))
+            if await _bounded_enqueue(_doc_to_redis(doc)):
+                return True
         except Exception as exc:  # noqa: BLE001
             _redis_failures += 1
             logger.warning(
                 "token usage Redis enqueue failed error_type=%s failures=%d",
                 type(exc).__name__,
                 _redis_failures,
+            )
+    if _durable_fallback is not None:
+        try:
+            if await _durable_fallback(dict(doc)):
+                _durable_fallback_accepts += 1
+                return True
+            _durable_fallback_failures += 1
+            logger.error(
+                "token usage durable fallback rejected event failures=%d",
+                _durable_fallback_failures,
+            )
+        except Exception as exc:  # noqa: BLE001
+            _durable_fallback_failures += 1
+            logger.error(
+                "token usage durable fallback failed error_type=%s failures=%d",
+                type(exc).__name__,
+                _durable_fallback_failures,
             )
     return False
 
@@ -255,6 +280,9 @@ def get_transport_stats() -> dict[str, Any]:
         "redis_failures": _redis_failures,
         "redis_capacity_rejections": _redis_capacity_rejections,
         "redis_queue_max_size": REDIS_QUEUE_MAX_SIZE,
+        "durable_fallback_configured": _durable_fallback is not None,
+        "durable_fallback_accepts": _durable_fallback_accepts,
+        "durable_fallback_failures": _durable_fallback_failures,
     }
 
 

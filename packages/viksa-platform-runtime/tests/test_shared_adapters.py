@@ -7,8 +7,11 @@ import pytest
 
 from viksa_platform.aiohttp_lifecycle import close_session
 from viksa_platform.auth.sso_access import (
+    extract_org_ids,
     extract_project_ids,
     get_admin_org_ids,
+    has_org_permission,
+    is_org_admin_for,
 )
 from viksa_platform.mongo import (
     cached_mongo_database,
@@ -53,13 +56,56 @@ def test_resource_and_access_projections_are_canonical() -> None:
         "orgs": [
             {
                 "org_id": "org-1",
-                "org_role": {"permissions": [{"module": "organization", "actions": ["admin"]}]},
+                "org_role": {
+                    "permissions": [
+                        {"module": "access_control", "actions": ["manage"]}
+                    ]
+                },
                 "projects": [{"project_id": "project-1"}],
             }
         ]
     }
     assert extract_project_ids(access) == ["project-1"]
     assert get_admin_org_ids(access) == ["org-1"]
+    assert has_org_permission(access, "org-1", "access_control", "manage")
+    assert is_org_admin_for(access, "org-1")
+
+
+def test_sso_access_projections_fail_closed_for_legacy_and_malformed_grants() -> None:
+    legacy: dict[str, Any] = {
+        "orgs": [
+            {
+                "org_id": "org-1",
+                "org_role": {
+                    "permissions": [
+                        {"module": "organization", "actions": ["admin", "all"]}
+                    ]
+                },
+            }
+        ]
+    }
+    assert not is_org_admin_for(legacy, "org-1")
+    assert get_admin_org_ids(legacy) == []
+
+    malformed: dict[str, Any] = {
+        "orgs": [
+            None,
+            "org-2",
+            {"org_id": True, "projects": [None, {"project_id": False}]},
+            {
+                "org_id": "org-3",
+                "org_role": {
+                    "permissions": {
+                        "module": "access_control",
+                        "actions": ["manage"],
+                    }
+                },
+            },
+        ]
+    }
+    assert extract_org_ids(malformed) == ["org-3"]
+    assert extract_project_ids(malformed) == []
+    assert not is_org_admin_for(malformed, "org-3")
 
 
 def test_redis_policy_covers_urls_tls_and_ca_validation(tmp_path: Path) -> None:
