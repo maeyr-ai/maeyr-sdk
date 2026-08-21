@@ -14,7 +14,7 @@ from .ids import generate_span_id, generate_trace_id, normalize_span_id, normali
 from .labels import derive_labels
 from .sampling import should_sample
 from .semconv import enrich_span_attributes, operation_for_span_name
-from .tenant import span_ref, valid_tenant_id
+from .tenant import span_ref, valid_span_tenant_scope
 from .transport import enqueue_span, get_transport_stats, re_enqueue_spans
 
 logger = logging.getLogger("platform_traces.recorder")
@@ -192,10 +192,10 @@ def _build_span_doc(
 
 async def _enqueue_or_buffer(doc: Dict[str, Any]) -> None:
     global _redis_enqueue_failures, _spans_dropped_invalid_tenant, _spans_dropped_queue_overflow
-    if not valid_tenant_id(doc.get("account_id")):
+    if not valid_span_tenant_scope(doc):
         _spans_dropped_invalid_tenant += 1
         logger.warning(
-            "Skipping span enqueue with invalid account_id: %s (dropped=%d)",
+            "Skipping span enqueue with invalid tenant scope: %s (dropped=%d)",
             span_ref(doc),
             _spans_dropped_invalid_tenant,
         )

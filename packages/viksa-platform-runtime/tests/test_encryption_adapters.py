@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 from typing import Any
 
@@ -8,7 +9,29 @@ import pytest
 from viksa_platform.security.encryption import (
     fingerprint_and_zero_secret_buffer,
     get_aws_kms_client,
+    normalize_fernet_key,
 )
+
+
+def test_normalize_fernet_key_preserves_canonical_key() -> None:
+    canonical = base64.urlsafe_b64encode(bytes(range(32)))
+
+    assert normalize_fernet_key(canonical.decode("ascii")) == canonical
+
+
+def test_normalize_fernet_key_derives_legacy_platform_secret_deterministically() -> None:
+    legacy_bytes = bytes(range(48))
+    legacy = base64.urlsafe_b64encode(legacy_bytes).decode("ascii")
+    expected = base64.urlsafe_b64encode(hashlib.sha256(legacy_bytes).digest())
+
+    assert normalize_fernet_key(legacy) == expected
+    assert normalize_fernet_key(legacy) == expected
+
+
+@pytest.mark.parametrize("invalid", ["", "not-base64!", "YQ==", "A" * 60])
+def test_normalize_fernet_key_rejects_invalid_material(invalid: str) -> None:
+    with pytest.raises(ValueError):
+        normalize_fernet_key(invalid)
 
 
 def test_fingerprint_erases_mutable_secret_buffer() -> None:

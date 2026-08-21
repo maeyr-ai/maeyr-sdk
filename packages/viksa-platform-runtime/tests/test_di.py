@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 
 from viksa_platform.di import LazyOwned, lazy_owned
@@ -31,3 +32,13 @@ def test_lazy_owned_replace_can_reset_resolution() -> None:
     assert proxy.value == 2
     proxy.replace(None)
     assert int(proxy.value) == 1
+
+
+def test_lazy_owned_does_not_shadow_owned_resolve_method() -> None:
+    class _Resolver:
+        async def resolve(self, value: str) -> str:
+            return f"resolved:{value}"
+
+    resolver = lazy_owned(_Resolver)
+
+    assert asyncio.run(resolver.resolve("scope")) == "resolved:scope"

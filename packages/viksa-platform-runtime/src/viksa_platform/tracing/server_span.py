@@ -10,6 +10,7 @@ from .constants import SPAN_HTTP_SERVER, SpanKind, SpanOperation
 from .context import TraceContext
 from .ids import generate_span_id
 from .semconv import ATTR_HTTP_METHOD, ATTR_HTTP_ROUTE, ATTR_HTTP_STATUS
+from .tenant import valid_span_tenant_scope
 
 
 def _new_span_id() -> str:
@@ -38,6 +39,19 @@ def schedule_http_server_span(
     resource_refs: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Fire-and-forget SERVER span for an HTTP request (safe after context clear)."""
+    # Public authentication, readiness, and other pre-tenant requests are valid
+    # application traffic, but they are not tenant traces.  Reject them before
+    # creating a background task so they never become noisy "dropped" spans or
+    # consume recorder capacity.
+    if not valid_span_tenant_scope(
+        {
+            "account_id": account_id,
+            "org_id": org_id,
+            "project_id": project_id,
+        }
+    ):
+        return
+
     from .recorder import record_span
 
     ended_at = datetime.now(timezone.utc)

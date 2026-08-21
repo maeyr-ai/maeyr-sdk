@@ -200,6 +200,7 @@ class RemoteTraceRecorder:
         "_enrich",
         "_failed_spans",
         "_key",
+        "_last_transport_error_type",
         "_max_retries",
         "_queue",
         "_sent_spans",
@@ -236,6 +237,7 @@ class RemoteTraceRecorder:
         self._durably_queued_spans = 0
         self._dropped_spans = 0
         self._failed_spans = 0
+        self._last_transport_error_type: str | None = None
         self._sent_spans = 0
         self._batch_spans = max(1, min(1_000, int(batch_spans)))
         self._max_retries = max(1, min(10, int(max_retries)))
@@ -609,9 +611,11 @@ class RemoteTraceRecorder:
                     limits=httpx.Limits(
                         max_connections=_MAX_CONNECTIONS,
                         max_keepalive_connections=_MAX_KEEPALIVE_CONNECTIONS,
+                        keepalive_expiry=2.0,
                     ),
                 )
-            response = await self._client.post(
+            client = self._client
+            response = await client.post(
                 url,
                 content=body_bytes,
                 headers=headers,
@@ -619,29 +623,44 @@ class RemoteTraceRecorder:
             if 200 <= response.status_code < 300:
                 return True, False
             retryable = response.status_code == 429 or response.status_code >= 500
-            logger.warning(
-                "Remote trace push rejected service=%s status=%s retryable=%s",
-                self.service,
-                response.status_code,
-                retryable,
-            )
+            if not retryable:
+                logger.warning(
+                    "Remote trace push rejected service=%s status=%s retryable=false",
+                    self.service,
+                    response.status_code,
+                )
             return False, retryable
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # telemetry failures must never escape
-            logger.warning(
-                "Remote trace push failed service=%s error_type=%s",
-                self.service,
-                type(exc).__name__,
-            )
+            self._last_transport_error_type = type(exc).__name__
+            # A rolled/restarted service can leave a pooled keep-alive socket
+            # pointing at the removed endpoint.  Discard that exact pool before
+            # retrying so DNS/service discovery selects the ready replacement.
+            client = locals().get("client")
+            if client is not None and self._client is client:
+                self._client = None
+                try:
+                    await client.aclose()
+                except Exception:
+                    pass
             return False, True
 
     async def _post_with_retry(self, spans: list[dict[str, Any]]) -> bool:
+        self._last_transport_error_type = None
         for attempt in range(1, self._max_retries + 1):
             success, retryable = await self._post_once(spans)
             if success:
                 return True
-            if not retryable or attempt >= self._max_retries:
+            if not retryable:
+                return False
+            if attempt >= self._max_retries:
+                logger.warning(
+                    "Remote trace push exhausted retries service=%s attempts=%s error_type=%s",
+                    self.service,
+                    attempt,
+                    self._last_transport_error_type or "HTTPError",
+                )
                 return False
             await asyncio.sleep(min(_RETRY_BASE_SECONDS * (2 ** (attempt - 1)), 2.0))
         return False

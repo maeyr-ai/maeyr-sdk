@@ -20,7 +20,9 @@ class LazyOwned(Generic[T]):
         object.__setattr__(self, "_factory", factory)
         object.__setattr__(self, "_resolved", _UNRESOLVED)
 
-    def resolve(self) -> T:
+    def _get_owned(self) -> T:
+        """Return the owned value without shadowing its public methods."""
+
         current = self._resolved
         if current is _UNRESOLVED:
             current = self._factory()
@@ -31,19 +33,19 @@ class LazyOwned(Generic[T]):
         object.__setattr__(self, "_resolved", _UNRESOLVED if value is None else value)
 
     def __getattr__(self, name: str) -> object:
-        return getattr(self.resolve(), name)
+        return getattr(self._get_owned(), name)
 
     def __setattr__(self, name: str, value: object) -> None:
         if name in self.__slots__:
             object.__setattr__(self, name, value)
             return
-        setattr(self.resolve(), name, value)
+        setattr(self._get_owned(), name, value)
 
     def __delattr__(self, name: str) -> None:
         if name in self.__slots__:
             object.__delattr__(self, name)
             return
-        delattr(self.resolve(), name)
+        delattr(self._get_owned(), name)
 
 
 def lazy_owned(factory: Callable[[], T]) -> T:

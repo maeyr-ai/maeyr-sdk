@@ -5,12 +5,15 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 from collections.abc import Callable, Mapping
 from importlib import import_module
 from typing import Any, Generic, TypeVar, cast
 
 KeyT = TypeVar("KeyT")
+
+_URLSAFE_SECRET_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class RequiredPrimaryKeyMixin(Generic[KeyT]):
@@ -48,6 +51,37 @@ def derive_fernet_key(
         backend=backends.default_backend(),
     )
     return base64.urlsafe_b64encode(cast(bytes, kdf.derive(seed.encode())))
+
+
+def normalize_fernet_key(key_material: str) -> bytes:
+    """Return a Fernet key, including compatibility for legacy platform secrets.
+
+    Early platform releases generated ``RUNTIME_CREDENTIAL_ENCRYPTION_KEY`` with
+    ``token_urlsafe(48)``.  That is strong secret material, but Fernet accepts
+    exactly 32 decoded bytes.  Deriving a 32-byte key from the decoded legacy
+    material is deterministic, so existing installations do not need to rotate
+    their stable generated secret merely to correct its representation.
+    """
+
+    value = key_material.strip()
+    if not value:
+        raise ValueError("Fernet key material is empty")
+    try:
+        encoded = value.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ValueError("Fernet key material must be ASCII") from exc
+
+    try:
+        decoded = base64.urlsafe_b64decode(encoded)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Fernet key material is not URL-safe base64") from exc
+    if len(decoded) == 32:
+        return base64.urlsafe_b64encode(decoded)
+
+    if len(value) == 64 and _URLSAFE_SECRET_RE.fullmatch(value) and len(decoded) == 48:
+        return base64.urlsafe_b64encode(hashlib.sha256(decoded).digest())
+
+    raise ValueError("Fernet key must decode to 32 bytes")
 
 
 def generate_recovery_key(
@@ -132,4 +166,5 @@ __all__ = [
     "get_aws_kms_client",
     "generate_recovery_key",
     "get_gcp_kms_client",
+    "normalize_fernet_key",
 ]

@@ -108,7 +108,6 @@ async def _call_auth_validate(
         if status_code != 200:
             logger.warning("Auth service returned non-200 status: %s", status_code)
             if 500 <= status_code < 600:
-                logger.error("Auth service returned server error: %s", status_code)
                 raise aiohttp.ClientError(f"Server error {status_code}")
             if status_code == 401:
                 raise HTTPException(
@@ -195,6 +194,18 @@ async def close_auth_validator() -> None:
         await session.close()
 
 
+async def _discard_auth_session(session: aiohttp.ClientSession) -> None:
+    """Remove one failed pooled session without closing a newer replacement."""
+    global _auth_session, _auth_session_lock
+    if _auth_session_lock is None:
+        _auth_session_lock = asyncio.Lock()
+    async with _auth_session_lock:
+        if _auth_session is session:
+            _auth_session = None
+    if not session.closed:
+        await session.close()
+
+
 async def _validate_credential_with_retries(
     credential: str,
     org_id: Optional[str] = None,
@@ -210,8 +221,9 @@ async def _validate_credential_with_retries(
     initial_delay = auth_settings.AUTH_API_RETRY_BACKOFF * 0.5
     delay = initial_delay
 
-    session = await _get_auth_session()
+    last_error: BaseException | None = None
     for attempt in range(1, retries + 1):
+        session = await _get_auth_session()
         try:
             headers = {
                 "Content-Type": "application/json",
@@ -248,19 +260,27 @@ async def _validate_credential_with_retries(
                 detail="Authentication service unavailable",
             ) from exc
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            logger.error(
-                "Auth request failed attempt=%s/%s error_type=%s",
-                attempt,
-                retries,
-                type(exc).__name__,
-            )
+            last_error = exc
+            if isinstance(exc, (aiohttp.ClientConnectionError, asyncio.TimeoutError)):
+                await _discard_auth_session(session)
 
         if attempt < retries:
-            logger.info("Retrying Auth request in %.1f seconds", delay)
+            logger.warning(
+                "Auth request transient failure; retrying attempt=%s/%s "
+                "error_type=%s delay=%.1fs",
+                attempt,
+                retries,
+                type(last_error).__name__ if last_error is not None else "unknown",
+                delay,
+            )
             await asyncio.sleep(delay)
             delay = min(delay * 2, 8.0)
 
-    logger.error("Max retries reached. Auth service unavailable.")
+    logger.error(
+        "Auth request failed after retries attempts=%s error_type=%s",
+        retries,
+        type(last_error).__name__ if last_error is not None else "unknown",
+    )
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         detail="Authentication service unavailable",
