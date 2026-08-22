@@ -280,6 +280,30 @@ def test_stream_failure_and_task_results_fail_closed() -> None:
     assert task == {"status": "error", "error": "Unknown error"}
 
 
+def test_stream_error_allowlists_llm_public_failures() -> None:
+    rate_limited = (
+        "The LLM provider rate-limited this request. Wait a moment and try again, "
+        "or check the key's usage limits."
+    )
+    payload = display.sanitize_stream_error_data(
+        {
+            "error": rate_limited,
+            "error_code": "llm_rate_limited",
+            "stack": "Traceback /private/path",
+        }
+    )
+    assert payload["error"] == rate_limited
+    assert payload["error_code"] == "llm_rate_limited"
+    assert "stack" not in payload
+
+    leaked = display.sanitize_stream_error_data(
+        {"error": "RateLimitError 429 sk-live-abcdefghij", "error_code": "internal.stack"}
+    )
+    assert leaked["error"] == display.TRACE_ERROR_RUN_FAILED
+    assert "error_code" not in leaked
+    assert "sk-live" not in json.dumps(leaked)
+
+
 def test_stream_event_specific_fields_are_preserved_or_redacted_by_policy() -> None:
     completed = display.sanitize_stream_event_payload(
         "task_complete",

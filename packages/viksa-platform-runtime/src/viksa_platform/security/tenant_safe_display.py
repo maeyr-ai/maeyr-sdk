@@ -79,6 +79,16 @@ _TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
         TRACE_ERROR_RUN_FAILED,
         TRACE_ERROR_REQUEST_FAILED,
         TRACE_ERROR_AI_SERVICE,
+        (
+            "The LLM provider rate-limited this request. Wait a moment and try again, "
+            "or check the key's usage limits."
+        ),
+        "The LLM provider rejected the API key. Update it in Settings → LLM providers.",
+        (
+            "The LLM provider rejected this request. Check the model and key in "
+            "Settings → LLM providers."
+        ),
+        "The LLM provider could not complete this request. Try again in a moment.",
         "Failed to process request. Please try again.",
         "Server busy, please try again later",
         "Failed to start streaming",
@@ -105,6 +115,12 @@ _TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
         "No agents available for this trigger. Check allowed_agents configuration.",
         "Execution cancelled (client disconnected or timeout)",
         "Execution interrupted",
+        "Paused execution state is missing its harness transcript.",
+        "Paused user input cannot be resumed in this execution context.",
+        (
+            "Unable to start resume because another attempt may be in progress. "
+            "Please reconnect or retry shortly."
+        ),
         "Schedule execution cancelled",
         "Replay error",
         "No agents available for replay",
@@ -123,6 +139,16 @@ _TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
         "Health check failed",
         "MongoDB health check failed",
         "Execution does not contain a replayable prompt",
+    }
+)
+
+_TRACE_SAFE_ERROR_CODES = frozenset(
+    {
+        "llm_rate_limited",
+        "llm_auth_failed",
+        "llm_rejected",
+        "llm_unavailable",
+        "request_failed",
     }
 )
 
@@ -660,6 +686,11 @@ def _sanitize_top_level_failure_fields(
             payload[key] = tenant_safe_trace_message(text, fallback=fallback)
     for key in _STRIP_ON_FAILURE_KEYS:
         payload.pop(key, None)
+    code = payload.get("error_code")
+    if "error_code" in payload and (
+        not isinstance(code, str) or code not in _TRACE_SAFE_ERROR_CODES
+    ):
+        payload.pop("error_code", None)
     return sanitize_persisted_event_data(payload, error_fallback=fallback)
 
 
