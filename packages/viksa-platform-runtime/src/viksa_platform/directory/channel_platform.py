@@ -20,6 +20,17 @@ class WebhookChannelType(str, Enum):
     WEB_WIDGET = "web_widget"
 
 
+class ChannelConnectorType(str, Enum):
+    """Execution mode for a channel connection.
+
+    Each project has at most one ``channel_connections`` row per
+    ``(channel, connector_type)``. Install and reconnect update that row.
+    """
+
+    AGENT = "agent"
+    API = "api"
+
+
 class ChannelTier(str, Enum):
     TIER1 = "tier1"
     TIER2 = "tier2"
@@ -223,14 +234,45 @@ class ChannelAccessPolicyResponse(BaseModel):
 
 
 class ChannelConnectionStatusResponse(BaseModel):
+    """Public status for one connector card.
+
+    List responses key this object as ``{channel}_{connector_type}``
+    (for example ``slack_agent``). The untyped ``{channel}`` alias is the
+    agent record. Clients that open a card must send ``connector_type``.
+    """
+
     account_id: str
     org_id: str
     project_id: str
     channel: str
     installed: bool = False
     lifecycle_state: str = "uninstalled"
+    connector_type: ChannelConnectorType = Field(
+        default=ChannelConnectorType.AGENT,
+        description=(
+            "Connection identity. Agent and API are separate records. "
+            "Install and reconnect update this record; they do not insert a sibling."
+        ),
+    )
     routing_key: Optional[str] = None
     webhook_url: Optional[str] = None
     metadata: Dict[str, str] = Field(default_factory=dict)
     last_error: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+class ChannelStatusesResponse(BaseModel):
+    scope: Dict[str, str]
+    channels: Dict[str, ChannelConnectionStatusResponse]
+
+
+class ChannelInstallResponse(BaseModel):
+    installation: Dict[str, Any] = Field(default_factory=dict)
+    status: ChannelConnectionStatusResponse
+    validation: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ChannelUninstallResponse(BaseModel):
+    channel: str
+    deleted: bool
+    connector_type: ChannelConnectorType = ChannelConnectorType.AGENT
