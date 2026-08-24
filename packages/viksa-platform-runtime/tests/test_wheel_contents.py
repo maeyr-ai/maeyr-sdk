@@ -89,6 +89,7 @@ def test_built_wheel_contains_typed_package_and_license(tmp_path: Path) -> None:
         assert "viksa_platform/metrics/resource_refs.py" in names
         assert "viksa_platform/telemetry/__init__.py" in names
         assert "viksa_platform/telemetry/attribution.py" in names
+        assert "viksa_platform/telemetry/execution.py" in names
         assert "viksa_platform/metrics/schema.py" in names
         assert "viksa_platform/metrics/transport.py" in names
         assert "viksa_platform/security/internal.py" in names

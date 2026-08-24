@@ -16,14 +16,36 @@ from viksa_platform.telemetry.attribution import (
     catalog_agent_ids,
     stamp_catalog_agent_ids,
 )
+from viksa_platform.telemetry.execution import (
+    EXECUTION_FAILURE_STATUSES,
+    EXECUTION_ROLLUP_GROUP_BY,
+    EXECUTION_SUCCESS_STATUSES,
+    execution_failure_cond,
+    execution_rollup_group_id,
+    execution_status_label,
+    execution_success_cond,
+    normalize_execution_group_by,
+    shape_execution_rollup,
+    shape_execution_rollup_row,
+)
 
 __all__ = [
+    "EXECUTION_FAILURE_STATUSES",
+    "EXECUTION_ROLLUP_GROUP_BY",
+    "EXECUTION_SUCCESS_STATUSES",
     "RESOURCE_REF_KEYS",
     "agent_id_from_document",
     "build_cost_rollup_match_filter",
     "build_resource_refs",
     "catalog_agent_ids",
+    "execution_failure_cond",
+    "execution_rollup_group_id",
+    "execution_status_label",
+    "execution_success_cond",
     "merge_resource_refs",
+    "normalize_execution_group_by",
     "resource_ref_match",
+    "shape_execution_rollup",
+    "shape_execution_rollup_row",
     "stamp_catalog_agent_ids",
 ]
