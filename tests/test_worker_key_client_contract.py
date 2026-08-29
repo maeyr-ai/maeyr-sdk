@@ -6,8 +6,8 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from viksa_ai.client import ViksaClient
-from viksa_ai.models import WorkerKeyCreateRequest, WorkerKeyRateLimit
+from maeyr.client import MaeyrClient
+from maeyr.models import WorkerKeyCreateRequest, WorkerKeyRateLimit
 
 
 def _created_worker_key() -> dict:
@@ -50,7 +50,7 @@ async def test_create_worker_key_preserves_legacy_call_and_sends_current_contrac
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
-        client = ViksaClient("token", base_url="https://api.test")
+        client = MaeyrClient("token", base_url="https://api.test")
         client._transport._async_client = http
         response = await client.auth.create_worker_key(
             " Release Worker ",
@@ -91,7 +91,7 @@ async def test_create_worker_key_accepts_typed_request_without_field_mixing() ->
     )
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
-        client = ViksaClient("token", base_url="https://api.test")
+        client = MaeyrClient("token", base_url="https://api.test")
         client._transport._async_client = http
         await client.auth.create_worker_key(request)
         with pytest.raises(ValueError, match="cannot be combined"):
@@ -125,7 +125,7 @@ async def test_list_revoke_and_delete_worker_keys_match_auth_routes() -> None:
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
-        client = ViksaClient("token", base_url="https://api.test")
+        client = MaeyrClient("token", base_url="https://api.test")
         client._transport._async_client = http
         listed = await client.auth.list_worker_keys(
             project_id="project",
@@ -158,7 +158,7 @@ async def test_list_revoke_and_delete_worker_keys_match_auth_routes() -> None:
 
 @pytest.mark.asyncio
 async def test_worker_key_list_and_identifiers_fail_before_transport() -> None:
-    client = ViksaClient("token", base_url="https://api.test")
+    client = MaeyrClient("token", base_url="https://api.test")
     with pytest.raises(ValueError, match="skip"):
         await client.auth.list_worker_keys(skip=-1)
     with pytest.raises(ValueError, match="limit"):

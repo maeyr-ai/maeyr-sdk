@@ -3,19 +3,19 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from viksa_ai._constants import (
+from maeyr._constants import (
     ENV_ACCESS_TOKEN,
     ENV_API_KEY,
     ENV_BASE_URL,
     ENV_EMAIL,
     ENV_PASSWORD,
 )
-from viksa_ai.client import ViksaClient
-from viksa_ai.models.auth import KeyValidationResponse, TokenResponse
+from maeyr.client import MaeyrClient
+from maeyr.models.auth import KeyValidationResponse, TokenResponse
 
 
 def test_from_api_key_sets_bearer_and_kind():
-    client = ViksaClient.from_api_key("vk_test_key", base_url="https://api.example.com")
+    client = MaeyrClient.from_api_key("vk_test_key", base_url="https://api.example.com")
     assert client.auth_kind == "api_key"
     assert client.api_key == "vk_test_key"
     assert client.base_url == "https://api.example.com"
@@ -26,14 +26,14 @@ def test_from_api_key_sets_bearer_and_kind():
 
 def test_from_api_key_validate_fills_tenant():
     with patch(
-        "viksa_ai.client.auth.AuthClient.validate_api_key_sync",
+        "maeyr.client.auth.AuthClient.validate_api_key_sync",
         return_value=KeyValidationResponse(
             valid=True,
             org_id="org-1",
             project_id="proj-1",
         ),
     ):
-        client = ViksaClient.from_api_key(
+        client = MaeyrClient.from_api_key(
             "vk_test_key",
             base_url="https://api.test",
             validate=True,
@@ -45,11 +45,11 @@ def test_from_api_key_validate_fills_tenant():
 
 def test_from_api_key_validate_invalid():
     with patch(
-        "viksa_ai.client.auth.AuthClient.validate_api_key_sync",
+        "maeyr.client.auth.AuthClient.validate_api_key_sync",
         return_value=KeyValidationResponse(valid=False, error="revoked"),
     ):
         with pytest.raises(ValueError, match="revoked"):
-            ViksaClient.from_api_key("bad", validate=True)
+            MaeyrClient.from_api_key("bad", validate=True)
 
 
 @pytest.mark.asyncio
@@ -68,8 +68,8 @@ async def test_from_login():
         self._apply_tokens(tokens)
         return tokens
 
-    with patch("viksa_ai.client.auth.AuthClient.login", new=fake_login):
-        client = await ViksaClient.from_login(
+    with patch("maeyr.client.auth.AuthClient.login", new=fake_login):
+        client = await MaeyrClient.from_login(
             "user@example.com",
             "secret",
             base_url="https://api.test",
@@ -92,8 +92,8 @@ def test_from_login_sync():
         self._apply_tokens(tokens)
         return tokens
 
-    with patch("viksa_ai.client.auth.AuthClient.login_sync", new=fake_login):
-        client = ViksaClient.from_login_sync("a@b.com", "pw", base_url="https://api.test")
+    with patch("maeyr.client.auth.AuthClient.login_sync", new=fake_login):
+        client = MaeyrClient.from_login_sync("a@b.com", "pw", base_url="https://api.test")
     assert client.access_token == "jwt-1"
     client.close()
 
@@ -117,7 +117,7 @@ def test_login_omits_empty_bearer_header():
 
     transport = httpx.MockTransport(handler)
     with httpx.Client(transport=transport, base_url="https://api.test") as http:
-        client = ViksaClient(access_token="", base_url="https://api.test")
+        client = MaeyrClient(access_token="", base_url="https://api.test")
         client._transport._sync_client = http
         client.auth.login_sync("a@b.com", "pw")
         assert client._transport.headers["Authorization"] == "Bearer jwt-1"
@@ -129,7 +129,7 @@ def test_from_env_api_key(monkeypatch):
     monkeypatch.delenv(ENV_EMAIL, raising=False)
     monkeypatch.setenv(ENV_API_KEY, "key-from-env")
     monkeypatch.setenv(ENV_BASE_URL, "https://staging.api.test")
-    client = ViksaClient.from_env()
+    client = MaeyrClient.from_env()
     assert client.auth_kind == "api_key"
     assert client.access_token == "key-from-env"
     assert client.base_url == "https://staging.api.test"
@@ -139,7 +139,7 @@ def test_from_env_api_key(monkeypatch):
 def test_from_env_access_token(monkeypatch):
     monkeypatch.delenv(ENV_API_KEY, raising=False)
     monkeypatch.setenv(ENV_ACCESS_TOKEN, "jwt-env")
-    client = ViksaClient.from_env()
+    client = MaeyrClient.from_env()
     assert client.auth_kind == "access_token"
     assert client.access_token == "jwt-env"
     client.close()
@@ -162,8 +162,8 @@ def test_from_env_login(monkeypatch):
         self._apply_tokens(tokens)
         return tokens
 
-    with patch("viksa_ai.client.auth.AuthClient.login_sync", new=fake_login):
-        client = ViksaClient.from_env()
+    with patch("maeyr.client.auth.AuthClient.login_sync", new=fake_login):
+        client = MaeyrClient.from_env()
     assert client.access_token == "jwt-login"
     client.close()
 
@@ -173,5 +173,5 @@ def test_from_env_requires_credential(monkeypatch):
     monkeypatch.delenv(ENV_ACCESS_TOKEN, raising=False)
     monkeypatch.delenv(ENV_EMAIL, raising=False)
     monkeypatch.delenv(ENV_PASSWORD, raising=False)
-    with pytest.raises(ValueError, match="VIKSA_API_KEY"):
-        ViksaClient.from_env()
+    with pytest.raises(ValueError, match="MAEYR_API_KEY"):
+        MaeyrClient.from_env()

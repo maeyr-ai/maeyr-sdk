@@ -96,7 +96,7 @@ def verify_release(
         f"{expected_root}/PKG-INFO",
         f"{expected_root}/README.md",
         f"{expected_root}/pyproject.toml",
-        f"{expected_root}/src/viksa_platform/py.typed",
+        f"{expected_root}/src/maeyr_platform/py.typed",
     }
     with tarfile.open(source_distribution, "r:gz") as archive:
         members = {member.name for member in archive.getmembers() if member.isfile()}
@@ -113,7 +113,7 @@ def verify_release(
             f"{(sdist_name, sdist_version)!r} != {(expected_name, declared_version)!r}"
         )
 
-    manifest = compare_manifest(wheel, project_directory / "src" / "viksa_platform")
+    manifest = compare_manifest(wheel, project_directory / "src" / "maeyr_platform")
     if not manifest["passed"]:
         raise ValueError(f"wheel package manifest mismatch: {manifest!r}")
 

@@ -1,17 +1,17 @@
-"""Tests for ViksaAuth runtime (ported from builder-service)."""
+"""Tests for MaeyrAuth runtime (ported from builder-service)."""
 
 import os
 import types
 
 import pytest
 
-from viksa_ai.runtime import ViksaAuth, mcp_endpoint
-from viksa_ai.runtime.inject import to_module_source
+from maeyr.runtime import MaeyrAuth, mcp_endpoint
+from maeyr.runtime.inject import to_module_source
 
 
 @pytest.fixture(scope="module")
 def sdk_from_injected():
-    mod = types.ModuleType("viksa_ai_sdk_under_test")
+    mod = types.ModuleType("maeyr_sdk_under_test")
     exec(to_module_source(), mod.__dict__)
     return mod
 
@@ -19,18 +19,18 @@ def sdk_from_injected():
 @pytest.fixture
 def clean_env(monkeypatch):
     for k in list(os.environ.keys()):
-        if k.startswith("VIKSA_") or "." in k:
+        if k.startswith("MAEYR_") or "." in k:
             monkeypatch.delenv(k, raising=False)
     return monkeypatch
 
 
 class TestEnabledMethods:
     def test_no_env_returns_empty_list(self, sdk_from_injected, clean_env):
-        assert sdk_from_injected.ViksaAuth.get_enabled_methods() == []
+        assert sdk_from_injected.MaeyrAuth.get_enabled_methods() == []
 
     def test_parses_comma_separated_list(self, sdk_from_injected, clean_env):
-        clean_env.setenv("VIKSA_AUTH_ENABLED_METHODS", "bearer_token,oauth_client")
-        assert sdk_from_injected.ViksaAuth.get_enabled_methods() == [
+        clean_env.setenv("MAEYR_AUTH_ENABLED_METHODS", "bearer_token,oauth_client")
+        assert sdk_from_injected.MaeyrAuth.get_enabled_methods() == [
             "bearer_token",
             "oauth_client",
         ]
@@ -38,14 +38,14 @@ class TestEnabledMethods:
 
 class TestParamAccessors:
     def test_require_param_raises_when_missing(self, sdk_from_injected, clean_env):
-        with pytest.raises(sdk_from_injected.ViksaAuthError):
-            sdk_from_injected.ViksaAuth.require_param("bearer_token", "api_key")
+        with pytest.raises(sdk_from_injected.MaeyrAuthError):
+            sdk_from_injected.MaeyrAuth.require_param("bearer_token", "api_key")
 
 
 class TestPackageRuntime:
     def test_require_param_package(self, clean_env):
         clean_env.setenv("bearer_token.api_key", "abc123")
-        assert ViksaAuth.require_param("bearer_token", "api_key") == "abc123"
+        assert MaeyrAuth.require_param("bearer_token", "api_key") == "abc123"
 
     def test_mcp_endpoint(self):
         @mcp_endpoint("desc")

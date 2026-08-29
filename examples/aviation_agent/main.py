@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import httpx
 
-from viksa_ai.runtime import ViksaAuth, mcp_endpoint
+from maeyr.runtime import MaeyrAuth, mcp_endpoint
 
 BASE_URL = "http://api.aviationstack.com/v1"
 
@@ -11,7 +11,7 @@ BASE_URL = "http://api.aviationstack.com/v1"
 async def get_flights_between(payload: Dict[str, Any]):
     source = payload.get("source")
     destination = payload.get("destination")
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -31,7 +31,7 @@ async def get_flights_between(payload: Dict[str, Any]):
 @mcp_endpoint(description="Get flight details by flight number")
 async def get_flight_by_number(payload: Dict[str, Any]):
     flight_number = payload.get("flight_number")
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -48,7 +48,7 @@ async def get_flight_by_number(payload: Dict[str, Any]):
 async def get_departures(payload: Dict[str, Any]):
     source = payload.get("source")
     time = payload.get("time")
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -74,7 +74,7 @@ async def get_departures(payload: Dict[str, Any]):
 async def get_arrivals(payload: Dict[str, Any]):
     destination = payload.get("destination")
     time = payload.get("time")
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -98,7 +98,7 @@ async def get_arrivals(payload: Dict[str, Any]):
 
 @mcp_endpoint(description="Get all grounded flights or those with issues")
 async def get_grounded_or_issues(payload: Dict[str, Any]):
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(

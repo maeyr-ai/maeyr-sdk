@@ -3,15 +3,15 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "viksa-ai"
+name = "maeyr"
 version = "0.2.8"
-description = "Viksa AI platform SDK: agent runtime, dev tooling, and HTTP client"
+description = "Maeyr platform SDK: agent runtime, dev tooling, and HTTP client"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
-authors = [{ name = "Viksa AI", email = "support@viksaai.com" }]
-keywords = ["viksa", "ai", "agents", "mcp", "sdk"]
+authors = [{ name = "Maeyr", email = "support@maeyr.com" }]
+keywords = ["maeyr", "ai", "agents", "mcp", "sdk"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -41,20 +41,20 @@ dev = [
 ]
 
 [project.scripts]
-viksa-agent-validate = "viksa_ai.devtools.cli:main"
-viksa-mcp-bridge = "viksa_ai.mcp_bridge.cli:main"
+maeyr-agent-validate = "maeyr.devtools.cli:main"
+maeyr-mcp-bridge = "maeyr.mcp_bridge.cli:main"
 
 [project.urls]
-Homepage = "https://viksaai.com"
-Documentation = "https://docs.viksaai.com"
-Repository = "https://github.com/viksa-ai/viksa-sdk"
-Issues = "https://github.com/viksa-ai/viksa-sdk/issues"
+Homepage = "https://maeyr.com"
+Documentation = "https://docs.maeyr.com"
+Repository = "https://github.com/maeyr/maeyr-sdk"
+Issues = "https://github.com/maeyr/maeyr-sdk/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-viksa_ai = ["py.typed", "runtime/_canonical_viksai.txt"]
+maeyr = ["py.typed", "runtime/_canonical_maeyr.txt"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -70,11 +70,11 @@ select = ["E", "F", "I", "W"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["src/viksa_ai"]
+files = ["src/maeyr"]
 show_error_codes = true
 show_error_context = true
 pretty = true
 warn_unused_configs = true
 
 [tool.coverage.run]
-source = ["viksa_ai"]
+source = ["maeyr"]

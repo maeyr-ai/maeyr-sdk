@@ -1,4 +1,4 @@
-from viksa_ai.runtime.a2a import (
+from maeyr.runtime.a2a import (
     A2A_PAYLOAD_KEY,
     _strip_envelope,
     attach_envelope,

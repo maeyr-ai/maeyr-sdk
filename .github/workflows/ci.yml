@@ -31,7 +31,7 @@ jobs:
           ruff format --check src tests
 
       - name: Pytest
-        run: pytest --cov=viksa_ai --cov-report=term-missing
+        run: pytest --cov=maeyr --cov-report=term-missing
 
       - name: Build and verify public distributions
         if: matrix.python-version == '3.12'
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/viksa-platform-runtime
+        working-directory: packages/maeyr-platform-runtime
     strategy:
       fail-fast: false
       matrix:
@@ -81,4 +81,4 @@ jobs:
           python ../../scripts/verify_python_release.py \
             --project-directory . \
             --dist-directory dist \
-            --expected-name viksa-platform-runtime
+            --expected-name maeyr-platform-runtime

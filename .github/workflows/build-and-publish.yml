@@ -1,8 +1,8 @@
 # Adapted from https://github.com/Srirammkm/jsonQ (.github/workflows/build-and-publish.yaml.bkp)
-# Publishes only the public viksa-ai SDK. The application-only platform runtime
+# Publishes only the public maeyr SDK. The application-only platform runtime
 # is deliberately excluded from every package-registry publishing path.
 
-name: Build and Publish viksa-ai to PyPI
+name: Build and Publish maeyr to PyPI
 
 on:
   push:
@@ -39,13 +39,13 @@ jobs:
           ruff format --check src tests
 
       - name: Pytest
-        run: pytest --cov=viksa_ai --cov-report=term-missing
+        run: pytest --cov=maeyr --cov-report=term-missing
 
       - name: Validate package import
         run: |
           python -c "
-          from viksa_ai.client import ViksaClient
-          from viksa_ai.runtime.inject import to_module_source
+          from maeyr.client import MaeyrClient
+          from maeyr.runtime.inject import to_module_source
           assert to_module_source()
           print('Package structure OK')
           "
@@ -110,7 +110,7 @@ jobs:
             echo "Tag $TAG already exists; skipping."
             exit 0
           fi
-          git tag -a "$TAG" -m "Release ${TAG} (PyPI viksa-ai ${VERSION})"
+          git tag -a "$TAG" -m "Release ${TAG} (PyPI maeyr ${VERSION})"
           git push origin "$TAG"
 
   post-release-validation:
@@ -126,9 +126,9 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
-          pip install "viksa-ai==${VERSION}"
+          pip install "maeyr==${VERSION}"
           python -c "
-          from viksa_ai.client import ViksaClient
-          import viksa_ai
-          print('Installed viksa-ai', viksa_ai.__version__ if hasattr(viksa_ai, '__version__') else VERSION)
+          from maeyr.client import MaeyrClient
+          import maeyr
+          print('Installed maeyr', maeyr.__version__ if hasattr(maeyr, '__version__') else VERSION)
           "

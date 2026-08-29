@@ -1,8 +1,8 @@
 import pytest
 
-from viksa_ai.devtools import AgentValidationError, validate_a2a_envelope, validate_agent_manifest
-from viksa_ai.models.a2a import A2AEnvelope
-from viksa_ai.models.agent import AgentEndpoint, AgentInput, EndpointInputRef, InputType
+from maeyr.devtools import AgentValidationError, validate_a2a_envelope, validate_agent_manifest
+from maeyr.models.a2a import A2AEnvelope
+from maeyr.models.agent import AgentEndpoint, AgentInput, EndpointInputRef, InputType
 
 VALID_MANIFEST = {
     "agent_name": "Test Agent",
@@ -13,7 +13,7 @@ VALID_MANIFEST = {
             "mime_type": "python",
             "content": """
 from typing import Any, Dict
-from viksa_ai.runtime import mcp_endpoint
+from maeyr.runtime import mcp_endpoint
 
 @mcp_endpoint("echo")
 async def echo(payload: Dict[str, Any]):

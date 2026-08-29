@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from viksa_ai.client.mcp import McpClient
+from maeyr.client.mcp import McpClient
 
 
-def test_mcp_client_headers_identify_viksa_sdk():
-    client = McpClient("mcp_test", client_slug="viksa_sdk")
+def test_mcp_client_headers_identify_maeyr_sdk():
+    client = McpClient("mcp_test", client_slug="maeyr_sdk")
     headers = client._headers()
     assert headers["Authorization"] == "Bearer mcp_test"
-    assert headers["X-MCP-Client"] == "viksa-sdk"
-    assert headers["User-Agent"].startswith("viksa-ai/")
+    assert headers["X-MCP-Client"] == "maeyr-sdk"
+    assert headers["User-Agent"].startswith("maeyr/")
 
 
 def test_mcp_client_gateway_url_scoped():

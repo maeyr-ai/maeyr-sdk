@@ -1,19 +1,19 @@
-# Viksa AI SDK (`viksa-ai`)
+# Maeyr SDK (`maeyr`)
 
-[![PyPI version](https://img.shields.io/pypi/v/viksa-ai)](https://pypi.org/project/viksa-ai/)
-[![Python](https://img.shields.io/pypi/pyversions/viksa-ai)](https://pypi.org/project/viksa-ai/)
-[![License](https://img.shields.io/github/license/viksa-ai/viksa-sdk)](https://github.com/viksa-ai/viksa-sdk/blob/main/LICENSE)
-[![CI](https://github.com/viksa-ai/viksa-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/viksa-ai/viksa-sdk/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/maeyr)](https://pypi.org/project/maeyr/)
+[![Python](https://img.shields.io/pypi/pyversions/maeyr)](https://pypi.org/project/maeyr/)
+[![License](https://img.shields.io/github/license/maeyr/maeyr-sdk)](https://github.com/maeyr/maeyr-sdk/blob/main/LICENSE)
+[![CI](https://github.com/maeyr/maeyr-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/maeyr/maeyr-sdk/actions/workflows/ci.yml)
 
-Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to author agents locally, call platform APIs from scripts and automation, and validate agent manifests before deploy.
+Official Python SDK for the [Maeyr](https://maeyr.com) platform. Use it to author agents locally, call platform APIs from scripts and automation, and validate agent manifests before deploy.
 
 | Module | Purpose |
 |--------|---------|
-| [`viksa_ai.runtime`](#agent-runtime) | Same API as injected `ViksaAI.py` (`mcp_endpoint`, `ViksaAuth`, A2A `context()`) |
-| [`viksa_ai.client`](#platform-http-client) | Typed async HTTP client for `https://api.viksaai.com` |
-| [`viksa_ai.devtools`](#development-tooling) | AST + schema validation for generated agents |
-| [`viksa_ai.mcp_bridge`](#mcp-bridge-cursor--claude) | Stdio MCP proxy to the hosted Viksa MCP gateway |
-| [`viksa_ai.models`](#data-models) | Pydantic models for API requests and A2A envelopes |
+| [`maeyr.runtime`](#agent-runtime) | Same API as injected `Maeyr.py` (`mcp_endpoint`, `MaeyrAuth`, A2A `context()`) |
+| [`maeyr.client`](#platform-http-client) | Typed async HTTP client for `https://api.maeyr.com` |
+| [`maeyr.devtools`](#development-tooling) | AST + schema validation for generated agents |
+| [`maeyr.mcp_bridge`](#mcp-bridge-cursor--claude) | Stdio MCP proxy to the hosted Maeyr MCP gateway |
+| [`maeyr.models`](#data-models) | Pydantic models for API requests and A2A envelopes |
 
 ---
 
@@ -23,12 +23,12 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 - [Quick start](#quick-start)
 - [Agent runtime](#agent-runtime)
   - [mcp_endpoint](#mcp_endpoint)
-  - [ViksaAuth](#viksaauth)
+  - [MaeyrAuth](#maeyrauth)
   - [A2A context](#a2a-context)
-  - [Injected ViksaAI.py](#injected-viksai-py)
+  - [Injected Maeyr.py](#injected-maeyri-py)
 - [Platform HTTP client](#platform-http-client)
   - [Authentication](#client-authentication)
-  - [ViksaClient reference](#viksaclient-reference)
+  - [MaeyrClient reference](#maeyrclient-reference)
   - [Errors](#errors)
   - [SSE streaming](#sse-streaming)
 - [MCP bridge (Cursor / Claude)](#mcp-bridge-cursor--claude)
@@ -46,13 +46,13 @@ Official Python SDK for the [Viksa AI](https://viksaai.com) platform. Use it to 
 **Requirements:** Python 3.10+
 
 ```bash
-pip install viksa-ai
+pip install maeyr
 ```
 
 With dev dependencies (tests, ruff, build):
 
 ```bash
-pip install "viksa-ai[dev]"
+pip install "maeyr[dev]"
 ```
 
 ---
@@ -66,7 +66,7 @@ from typing import Any, Dict
 
 import httpx
 
-from viksa_ai.runtime import ViksaAuth, mcp_endpoint
+from maeyr.runtime import MaeyrAuth, mcp_endpoint
 
 BASE_URL = "https://api.aviationstack.com/v1"
 
@@ -75,7 +75,7 @@ BASE_URL = "https://api.aviationstack.com/v1"
 async def get_flights_between(payload: Dict[str, Any]):
     source = payload.get("source")
     destination = payload.get("destination")
-    api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+    api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{BASE_URL}/flights",
@@ -94,11 +94,11 @@ async def get_flights_between(payload: Dict[str, Any]):
 ```python
 import asyncio
 
-from viksa_ai import ViksaClient
+from maeyr import MaeyrClient
 
 
 async def main():
-    async with ViksaClient(
+    async with MaeyrClient(
         access_token="YOUR_ACCESS_TOKEN",
         org_id="YOUR_ORG_ID",
         project_id="YOUR_PROJECT_ID",
@@ -115,14 +115,14 @@ asyncio.run(main())
 
 ## Agent runtime
 
-Import from `viksa_ai.runtime` (or `ViksaAI` after platform injection). This is the **canonical** implementation of the file the platform writes as `ViksaAI.py` on every agent.
+Import from `maeyr.runtime` (or `Maeyr` after platform injection). This is the **canonical** implementation of the file the platform writes as `Maeyr.py` on every agent.
 
 ### `mcp_endpoint`
 
 Decorator that marks an async function as an MCP-style agent endpoint. Metadata is used by the platform UI and validators; execution routing uses `agent_endpoints` in the agent manifest, not decorator introspection.
 
 ```python
-from viksa_ai.runtime import mcp_endpoint
+from maeyr.runtime import mcp_endpoint
 
 @mcp_endpoint(description="Human-readable description for docs and UI")
 async def my_tool(payload: dict):
@@ -131,15 +131,15 @@ async def my_tool(payload: dict):
 
 **Convention:** one parameter named `payload: Dict[str, Any]`, with inputs read via `payload.get("name")` or `payload["name"]`.
 
-### `ViksaAuth`
+### `MaeyrAuth`
 
 Reads auth configuration injected at deploy time as environment variables.
 
 | Environment variable | Meaning |
 |---------------------|---------|
 | `{method_id}.{param_name}` | Resolved secret or param value (e.g. `bearer_token.api_key`) |
-| `VIKSA_AUTH_ENABLED_METHODS` | Comma-separated method ids with **all** params resolved |
-| `VIKSA_AUTH_CONFIGURED_METHODS` | All method ids declared on the agent (including incomplete) |
+| `MAEYR_AUTH_ENABLED_METHODS` | Comma-separated method ids with **all** params resolved |
+| `MAEYR_AUTH_CONFIGURED_METHODS` | All method ids declared on the agent (including incomplete) |
 
 | Method | Description |
 |--------|-------------|
@@ -148,41 +148,41 @@ Reads auth configuration injected at deploy time as environment variables.
 | `get_enabled_methods()` | Method ids fully enabled at deploy |
 | `is_method_enabled(method_id)` | Whether the method is in the enabled set |
 | `get_param(method_id, param_name)` | Param value or `None` |
-| `require_param(method_id, param_name)` | Param value or raises `ViksaAuthError` |
+| `require_param(method_id, param_name)` | Param value or raises `MaeyrAuthError` |
 | `get_method_params(method_id)` | Dict of all params for one method |
 | `preferred_method(*candidates)` | First enabled candidate, or `None` |
 | `require_method(*candidates)` | First enabled candidate, or raises |
 
 ```python
-from viksa_ai.runtime import ViksaAuth, ViksaAuthError
+from maeyr.runtime import MaeyrAuth, MaeyrAuthError
 
 # Single required credential
-api_key = ViksaAuth.require_param("aviationstack_api", "api_key")
+api_key = MaeyrAuth.require_param("aviationstack_api", "api_key")
 
 # Multiple auth methods
-method = ViksaAuth.preferred_method("oauth_client", "bearer_token")
+method = MaeyrAuth.preferred_method("oauth_client", "bearer_token")
 if method == "oauth_client":
-    client_id = ViksaAuth.require_param("oauth_client", "client_id")
+    client_id = MaeyrAuth.require_param("oauth_client", "client_id")
 else:
-    api_key = ViksaAuth.require_param("bearer_token", "api_key")
+    api_key = MaeyrAuth.require_param("bearer_token", "api_key")
 ```
 
-Platform docs: [Agent auth and credentials](https://docs.viksaai.com/docs/agents/auth-and-credentials).
+Platform docs: [Agent auth and credentials](https://docs.maeyr.com/docs/agents/auth-and-credentials).
 
 ### A2A context
 
-Agent-to-agent calls can attach an optional envelope under the reserved payload key `__viksa_a2a__`. Use `context()` to read correlation metadata inside your endpoint.
+Agent-to-agent calls can attach an optional envelope under the reserved payload key `__maeyr_a2a__`. Use `context()` to read correlation metadata inside your endpoint.
 
 | Symbol | Role |
 |--------|------|
-| `A2A_PAYLOAD_KEY` | `"__viksa_a2a__"` — wire key in workflow inputs |
+| `A2A_PAYLOAD_KEY` | `"__maeyr_a2a__"` — wire key in workflow inputs |
 | `attach_envelope(inputs, envelope)` | Attach envelope to an inputs dict (callers / integrators) |
 | `context()` | Copy of the current call envelope, or `{}` |
 
 `A2AContext` is a `TypedDict` documenting common keys: `run_id`, `parent_step_id`, `caller_agent`, `callee_agent`, `endpoint`, `idempotency_key`, `deadline_at`, `metadata`.
 
 ```python
-from viksa_ai.runtime import attach_envelope, context
+from maeyr.runtime import attach_envelope, context
 
 # Building a call (integrator / orchestrator)
 inputs = attach_envelope(
@@ -196,12 +196,12 @@ run_id = ctx.get("run_id")
 parent = ctx.get("parent_step_id")
 ```
 
-### Injected `ViksaAI.py`
+### Injected `Maeyr.py`
 
-The platform injects `ViksaAI.py` into every agent’s file list. Generate the canonical module body from the SDK:
+The platform injects `Maeyr.py` into every agent’s file list. Generate the canonical module body from the SDK:
 
 ```python
-from viksa_ai.runtime.inject import to_module_source
+from maeyr.runtime.inject import to_module_source
 
 body = to_module_source()
 ```
@@ -210,7 +210,7 @@ body = to_module_source()
 
 ## Platform HTTP client
 
-Base URL default: `https://api.viksaai.com`. Requests are routed per service prefix (`/auth`, `/builder`, `/chat`, etc.), matching the platform API gateway.
+Base URL default: `https://api.maeyr.com`. Requests are routed per service prefix (`/auth`, `/builder`, `/chat`, etc.), matching the platform API gateway.
 
 ### Client authentication
 
@@ -226,57 +226,57 @@ The SDK supports three ways to authenticate:
 
 | Mode | How to create the client |
 |------|---------------------------|
-| **JWT** (default) | `ViksaClient(access_token="...")` or `VIKSA_ACCESS_TOKEN` |
-| **API key** | `ViksaClient.from_api_key("...")` or `VIKSA_API_KEY` |
-| **Email / password** | `await ViksaClient.from_login(email, password)` or `VIKSA_EMAIL` + `VIKSA_PASSWORD` |
+| **JWT** (default) | `MaeyrClient(access_token="...")` or `MAEYR_ACCESS_TOKEN` |
+| **API key** | `MaeyrClient.from_api_key("...")` or `MAEYR_API_KEY` |
+| **Email / password** | `await MaeyrClient.from_login(email, password)` or `MAEYR_EMAIL` + `MAEYR_PASSWORD` |
 
-Set **`base_url`** on the client (or `VIKSA_BASE_URL`) for staging, self-hosted, or regional gateways. Default: `https://api.viksaai.com`.
+Set **`base_url`** on the client (or `MAEYR_BASE_URL`) for staging, self-hosted, or regional gateways. Default: `https://api.maeyr.com`.
 
 ```python
-from viksa_ai import ViksaClient
+from maeyr import MaeyrClient
 
 # JWT from the console or a prior login
-async with ViksaClient(access_token="eyJ...", org_id="org", project_id="proj") as client:
+async with MaeyrClient(access_token="eyJ...", org_id="org", project_id="proj") as client:
     me = await client.auth.me()
 
 # Project API key (optional validate=True to resolve org/project)
-client = ViksaClient.from_api_key("vk_...", base_url="https://api.viksaai.com")
+client = MaeyrClient.from_api_key("vk_...", base_url="https://api.maeyr.com")
 
 # Login
-client = await ViksaClient.from_login("you@example.com", "password", base_url="https://api.viksaai.com")
+client = await MaeyrClient.from_login("you@example.com", "password", base_url="https://api.maeyr.com")
 ```
 
-**Environment variables** (for `ViksaClient.from_env()` — first match wins):
+**Environment variables** (for `MaeyrClient.from_env()` — first match wins):
 
 | Variable | Description |
 |----------|-------------|
-| `VIKSA_API_KEY` | Project API key |
-| `VIKSA_ACCESS_TOKEN` | JWT access token |
-| `VIKSA_EMAIL` + `VIKSA_PASSWORD` | Log in and obtain a JWT |
-| `VIKSA_ORG_ID` | Tenant org id (optional) |
-| `VIKSA_PROJECT_ID` | Tenant project id (optional) |
-| `VIKSA_REFRESH_TOKEN` | Enables automatic refresh on 401 (JWT only) |
-| `VIKSA_BASE_URL` | API base URL (default `https://api.viksaai.com`) |
+| `MAEYR_API_KEY` | Project API key |
+| `MAEYR_ACCESS_TOKEN` | JWT access token |
+| `MAEYR_EMAIL` + `MAEYR_PASSWORD` | Log in and obtain a JWT |
+| `MAEYR_ORG_ID` | Tenant org id (optional) |
+| `MAEYR_PROJECT_ID` | Tenant project id (optional) |
+| `MAEYR_REFRESH_TOKEN` | Enables automatic refresh on 401 (JWT only) |
+| `MAEYR_BASE_URL` | API base URL (default `https://api.maeyr.com`) |
 
 ```python
-from viksa_ai import ViksaClient
+from maeyr import MaeyrClient
 
-client = ViksaClient.from_env()
+client = MaeyrClient.from_env()
 ```
 
 Validate an API key without a full session: `await client.auth.validate_api_key("vk_...")`.
 
-### `ViksaClient` reference
+### `MaeyrClient` reference
 
 ```python
-from viksa_ai import ViksaClient
+from maeyr import MaeyrClient
 
-async with ViksaClient(
+async with MaeyrClient(
     access_token="...",        # JWT, or use from_api_key / from_login
     org_id="...",
     project_id="...",
     refresh_token="...",       # optional; JWT only
-    base_url="https://api.viksaai.com",  # configurable
+    base_url="https://api.maeyr.com",  # configurable
     timeout=60.0,
 ) as client:
     ...
@@ -285,7 +285,7 @@ async with ViksaClient(
 Sub-clients are created on the root client:
 
 ```text
-ViksaClient
+MaeyrClient
 ├── auth (+ auth.orgs, auth.projects)
 ├── builder.agents | deploy | secrets | mappings | mcp
 ├── chat (+ triggers, approvals)
@@ -295,7 +295,7 @@ ViksaClient
 └── marketplace.listings | workforce | publishers
 ```
 
-Use `ViksaClient.webhook(trigger_id, webhook_token=...)` for public webhook routes (no JWT).
+Use `MaeyrClient.webhook(trigger_id, webhook_token=...)` for public webhook routes (no JWT).
 Use `client.request(method, prefix, path)` for any route not yet wrapped.
 
 #### `client.auth`
@@ -411,7 +411,7 @@ Typed models: `EndpointExecutionRequest`, `EndpointExecutionResponse`, `AgentInv
 Endpoint path format: `{agent_alias}.{module}.{function}` (e.g. `my_agent.main.search`).
 
 ```python
-from viksa_ai.models.executor import AgentType, EndpointExecutionRequest
+from maeyr.models.executor import AgentType, EndpointExecutionRequest
 
 result = await client.pulse.execute(
     EndpointExecutionRequest(
@@ -458,7 +458,7 @@ result = await client.pulse.execute(
 #### Webhooks (no JWT)
 
 ```python
-wh = ViksaClient.webhook("trigger-id", webhook_token="...")
+wh = MaeyrClient.webhook("trigger-id", webhook_token="...")
 await wh.invoke({"event": "order.created"})
 async for evt in wh.stream({"event": "order.created"}):
     print(evt)
@@ -472,30 +472,30 @@ The client maps HTTP failures to typed exceptions and parses FastAPI `detail` pa
 
 | Exception | HTTP | When |
 |-----------|------|------|
-| `ViksaTransportError` | — | Timeouts, connection failures, DNS |
-| `ViksaAuthenticationError` | 401 | Invalid or expired token |
-| `ViksaPermissionError` | 403 | RBAC / tenant denial |
-| `ViksaNotFoundError` | 404 | Missing resource |
-| `ViksaConflictError` | 409 | State conflict |
-| `ViksaValidationError` | 422 | Schema / field validation |
-| `ViksaRateLimitError` | 429 | Rate limited (`retry_after` set) |
-| `ViksaServerError` | 5xx | Platform or gateway errors |
-| `ViksaApiError` | other | Base class for all API errors |
+| `MaeyrTransportError` | — | Timeouts, connection failures, DNS |
+| `MaeyrAuthenticationError` | 401 | Invalid or expired token |
+| `MaeyrPermissionError` | 403 | RBAC / tenant denial |
+| `MaeyrNotFoundError` | 404 | Missing resource |
+| `MaeyrConflictError` | 409 | State conflict |
+| `MaeyrValidationError` | 422 | Schema / field validation |
+| `MaeyrRateLimitError` | 429 | Rate limited (`retry_after` set) |
+| `MaeyrServerError` | 5xx | Platform or gateway errors |
+| `MaeyrApiError` | other | Base class for all API errors |
 
 ```python
-from viksa_ai import ViksaClient, ViksaNotFoundError, ViksaValidationError
+from maeyr import MaeyrClient, MaeyrNotFoundError, MaeyrValidationError
 
 try:
     await client.builder.agents.get("missing-id")
-except ViksaNotFoundError as e:
+except MaeyrNotFoundError as e:
     print(e.status_code, e.detail_message, e.request_id)
     for d in e.details:
         print(d.field, d.message)
-except ViksaValidationError as e:
+except MaeyrValidationError as e:
     print(e.body)
 ```
 
-| `ViksaApiError` attribute | Description |
+| `MaeyrApiError` attribute | Description |
 |---------------------------|-------------|
 | `status_code` | HTTP status |
 | `method`, `path`, `service` | Request context |
@@ -510,9 +510,9 @@ except ViksaValidationError as e:
 **401 refresh:** if `refresh_token` is set, one automatic token refresh and retry per request.
 
 ```python
-from viksa_ai.client import ClientConfig, RetryConfig
+from maeyr.client import ClientConfig, RetryConfig
 
-client = ViksaClient(
+client = MaeyrClient(
     token,
     config=ClientConfig(
         retry=RetryConfig(max_retries=5),
@@ -537,7 +537,7 @@ async for conv in client.chat.iter_conversations():
 Both `indent_finder` variants accept `schedule_id=...`; reuse it when retrying
 an ambiguous chat turn that may have created a schedule.
 
-`ViksaClient.iter_sse_lines(response)` is a static helper for custom streaming endpoints.
+`MaeyrClient.iter_sse_lines(response)` is a static helper for custom streaming endpoints.
 
 ```python
 async for event in client.chat.stream_indent_finder("Find my last deployment"):
@@ -555,10 +555,10 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 ```json
 {
   "mcpServers": {
-    "viksa": {
-      "url": "https://api.viksaai.com/mcp",
+    "maeyr": {
+      "url": "https://api.maeyr.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${env:VIKSA_MCP_TOKEN}"
+        "Authorization": "Bearer ${env:MAEYR_MCP_TOKEN}"
       }
     }
   }
@@ -570,58 +570,58 @@ async for event in client.chat.stream_indent_finder("Find my last deployment"):
 ```json
 {
   "mcpServers": {
-    "viksa": {
-      "url": "https://api.viksaai.com/mcp?token=${env:VIKSA_MCP_TOKEN}"
+    "maeyr": {
+      "url": "https://api.maeyr.com/mcp?token=${env:MAEYR_MCP_TOKEN}"
     }
   }
 }
 ```
 
 ```bash
-export VIKSA_MCP_TOKEN="mcp_..."
+export MAEYR_MCP_TOKEN="mcp_..."
 ```
 
-Create tokens in the Viksa console → **MCP Tokens**. Token policy controls which agents and scopes are available. Prefer the header when possible — URL tokens may appear in access logs.
+Create tokens in the Maeyr console → **MCP Tokens**. Token policy controls which agents and scopes are available. Prefer the header when possible — URL tokens may appear in access logs.
 
-### Stdio proxy (`viksa-mcp-bridge`)
+### Stdio proxy (`maeyr-mcp-bridge`)
 
 For clients that only support **stdio** MCP (older Claude Desktop setups), the SDK provides a thin proxy to **mcp-gateway-service** — registry, mappings, schemas, and execution all live on the gateway (Mongo + pulse), not in the SDK.
 
 ```bash
-pip install "viksa-ai[mcp]"
-export VIKSA_MCP_TOKEN="mcp_..."
+pip install "maeyr[mcp]"
+export MAEYR_MCP_TOKEN="mcp_..."
 
 # All agents allowed by the token
-viksa-mcp-bridge
+maeyr-mcp-bridge
 
 # Single agent scope
-viksa-mcp-bridge --agent-alias github_mcp_agent
+maeyr-mcp-bridge --agent-alias github_mcp_agent
 ```
 
 ```json
 {
   "mcpServers": {
-    "viksa": {
-      "command": "viksa-mcp-bridge",
+    "maeyr": {
+      "command": "maeyr-mcp-bridge",
       "env": {
-        "VIKSA_MCP_TOKEN": "mcp_...",
-        "VIKSA_BASE_URL": "https://api.viksaai.com"
+        "MAEYR_MCP_TOKEN": "mcp_...",
+        "MAEYR_BASE_URL": "https://api.maeyr.com"
       }
     }
   }
 }
 ```
 
-Scoped URL: `https://api.viksaai.com/mcp/agents/{agent_alias}` (set via `--agent-alias` or `VIKSA_AGENT_ALIAS`).
+Scoped URL: `https://api.maeyr.com/mcp/agents/{agent_alias}` (set via `--agent-alias` or `MAEYR_AGENT_ALIAS`).
 
 ### Environment variables
 
 | Variable | Description |
 |----------|-------------|
-| `VIKSA_MCP_TOKEN` | **Required.** MCP token from the console |
-| `VIKSA_BASE_URL` | API gateway base (default `https://api.viksaai.com`) |
-| `VIKSA_MCP_GATEWAY_URL` | Full MCP URL override (optional) |
-| `VIKSA_AGENT_ALIAS` | Default `--agent-alias` for scoped `/mcp/agents/{alias}` |
+| `MAEYR_MCP_TOKEN` | **Required.** MCP token from the console |
+| `MAEYR_BASE_URL` | API gateway base (default `https://api.maeyr.com`) |
+| `MAEYR_MCP_GATEWAY_URL` | Full MCP URL override (optional) |
+| `MAEYR_AGENT_ALIAS` | Default `--agent-alias` for scoped `/mcp/agents/{alias}` |
 
 ---
 
@@ -632,7 +632,7 @@ Validate agent manifests **before** pushing to the platform.
 ### CLI
 
 ```bash
-viksa-agent-validate ./path/to/agent/
+maeyr-agent-validate ./path/to/agent/
 ```
 
 Expects `agent.json` (or any JSON file passed as directory — reads `agent.json` inside the path) matching `AgentGenerationResponse` shape, including embedded `main.py` in `files[]`.
@@ -640,7 +640,7 @@ Expects `agent.json` (or any JSON file passed as directory — reads `agent.json
 ### Python API
 
 ```python
-from viksa_ai.devtools import (
+from maeyr.devtools import (
     AgentValidationError,
     validate_agent_manifest,
     validate_a2a_envelope,
@@ -670,14 +670,14 @@ issues = validate_a2a_envelope(
 
 ## Data models
 
-Pydantic v2 models in `viksa_ai.models` (import as needed):
+Pydantic v2 models in `maeyr.models` (import as needed):
 
 | Module | Types |
 |--------|-------|
-| `viksa_ai.models.agent` | `AgentCreationRequest`, `AgentUpdateRequest`, `AgentGenerationResponse`, `AgentEndpoint`, `AgentInput`, `AgentOutput`, … |
-| `viksa_ai.models.auth` | `LoginRequest`, `TokenResponse`, `UserResponse`, … |
-| `viksa_ai.models.a2a` | `A2AEnvelope`, `A2AResponse`, `A2AStatus`, `A2A_PROTOCOL_VERSION` |
-| `viksa_ai.models.executor` | `EndpointExecutionRequest`, `EndpointExecutionResponse`, `AgentInvokeRequest`, … |
+| `maeyr.models.agent` | `AgentCreationRequest`, `AgentUpdateRequest`, `AgentGenerationResponse`, `AgentEndpoint`, `AgentInput`, `AgentOutput`, … |
+| `maeyr.models.auth` | `LoginRequest`, `TokenResponse`, `UserResponse`, … |
+| `maeyr.models.a2a` | `A2AEnvelope`, `A2AResponse`, `A2AStatus`, `A2A_PROTOCOL_VERSION` |
+| `maeyr.models.executor` | `EndpointExecutionRequest`, `EndpointExecutionResponse`, `AgentInvokeRequest`, … |
 
 ---
 
@@ -685,7 +685,7 @@ Pydantic v2 models in `viksa_ai.models` (import as needed):
 
 | Path | Description |
 |------|-------------|
-| [`examples/aviation_agent/main.py`](examples/aviation_agent/main.py) | Aviationstack flight queries with `ViksaAuth` + `@mcp_endpoint` |
+| [`examples/aviation_agent/main.py`](examples/aviation_agent/main.py) | Aviationstack flight queries with `MaeyrAuth` + `@mcp_endpoint` |
 
 Run locally after `pip install -e .` and `pip install httpx`.
 
@@ -694,8 +694,8 @@ Run locally after `pip install -e .` and `pip install httpx`.
 ## Contributing
 
 ```bash
-git clone git@github.com:viksa-ai/viksa-sdk.git
-cd viksa-sdk
+git clone git@github.com:maeyr/maeyr-sdk.git
+cd maeyr-sdk
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
@@ -710,10 +710,10 @@ module consolidation from leaking into a later wheel:
 ```bash
 python -m build --sdist
 python -m pip wheel --no-deps --no-build-isolation \
-  --wheel-dir dist/wheelhouse dist/viksa_ai-*.tar.gz
+  --wheel-dir dist/wheelhouse dist/maeyr-*.tar.gz
 ```
 
-Before publishing, inspect the wheel, confirm `viksa_ai/py.typed` is present,
+Before publishing, inspect the wheel, confirm `maeyr/py.typed` is present,
 and run imports with the wheel as the only project path. The current MCP bridge
 artifact contains only `__init__.py`, `cli.py`, and `gateway.py`; the retired
 discovery, mappings, registry, server, and tools modules must not reappear.
@@ -721,7 +721,7 @@ The exact source-to-wheel check is executable:
 
 ```bash
 python scripts/verify_wheel_manifest.py \
-  dist/wheelhouse/viksa_ai-*.whl src/viksa_ai
+  dist/wheelhouse/maeyr-*.whl src/maeyr
 ```
 
 CI runs on push and pull requests to `main` (Python 3.10–3.12). Release versions are tagged as `v*` on this repository.

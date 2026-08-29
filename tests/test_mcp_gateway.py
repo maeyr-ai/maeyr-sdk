@@ -1,14 +1,14 @@
-"""Tests for Viksa MCP gateway stdio proxy helpers."""
+"""Tests for Maeyr MCP gateway stdio proxy helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from viksa_ai.mcp_bridge.gateway import resolve_gateway_url, resolve_mcp_token
+from maeyr.mcp_bridge.gateway import resolve_gateway_url, resolve_mcp_token
 
 
 def test_resolve_gateway_url_default():
-    assert resolve_gateway_url() == "https://api.viksaai.com/mcp"
+    assert resolve_gateway_url() == "https://api.maeyr.com/mcp"
 
 
 def test_resolve_gateway_url_with_agent_alias():
@@ -25,6 +25,6 @@ def test_resolve_mcp_token_from_explicit():
 
 
 def test_resolve_mcp_token_missing(monkeypatch):
-    monkeypatch.delenv("VIKSA_MCP_TOKEN", raising=False)
+    monkeypatch.delenv("MAEYR_MCP_TOKEN", raising=False)
     with pytest.raises(ValueError, match="MCP token required"):
         resolve_mcp_token(None)

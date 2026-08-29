@@ -1,11 +1,11 @@
 import httpx
 import pytest
 
-from viksa_ai.client.errors import (
-    ViksaAuthenticationError,
-    ViksaNotFoundError,
-    ViksaRateLimitError,
-    ViksaValidationError,
+from maeyr.client.errors import (
+    MaeyrAuthenticationError,
+    MaeyrNotFoundError,
+    MaeyrRateLimitError,
+    MaeyrValidationError,
     parse_error_details,
     raise_for_response,
 )
@@ -29,7 +29,7 @@ def test_parse_validation_list():
 
 def test_raise_for_response_maps_types():
     response = httpx.Response(404, json={"detail": "Agent not found"})
-    with pytest.raises(ViksaNotFoundError) as exc:
+    with pytest.raises(MaeyrNotFoundError) as exc:
         raise_for_response(response, service="builder", method="GET", path="/agent/x")
     assert exc.value.status_code == 404
     assert exc.value.detail_message == "Agent not found"
@@ -37,7 +37,7 @@ def test_raise_for_response_maps_types():
 
 def test_raise_401_authentication():
     response = httpx.Response(401, json={"detail": "Invalid token"})
-    with pytest.raises(ViksaAuthenticationError):
+    with pytest.raises(MaeyrAuthenticationError):
         raise_for_response(response, service="auth", method="GET", path="/me")
 
 
@@ -48,7 +48,7 @@ def test_raise_422_validation():
             "detail": [{"loc": ["body", "name"], "msg": "too short", "type": "string_too_short"}]
         },
     )
-    with pytest.raises(ViksaValidationError) as exc:
+    with pytest.raises(MaeyrValidationError) as exc:
         raise_for_response(response, service="builder", method="POST", path="/agent/create")
     assert len(exc.value.details) == 1
 
@@ -59,6 +59,6 @@ def test_raise_429_retry_after():
         json={"detail": "Rate limited"},
         headers={"Retry-After": "2"},
     )
-    with pytest.raises(ViksaRateLimitError) as exc:
+    with pytest.raises(MaeyrRateLimitError) as exc:
         raise_for_response(response, service="chat", method="POST", path="/chat/message")
     assert exc.value.retry_after == 2.0

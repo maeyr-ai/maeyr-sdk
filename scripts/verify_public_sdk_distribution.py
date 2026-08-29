@@ -12,8 +12,8 @@ from email.policy import default
 from pathlib import Path
 from zipfile import ZipFile
 
-_EXPECTED_DISTRIBUTION = "viksa-ai"
-_PRIVATE_DISTRIBUTIONS = frozenset({"viksa-platform-runtime"})
+_EXPECTED_DISTRIBUTION = "maeyr"
+_PRIVATE_DISTRIBUTIONS = frozenset({"maeyr-platform-runtime"})
 
 
 def _normalize_distribution(value: str) -> str:

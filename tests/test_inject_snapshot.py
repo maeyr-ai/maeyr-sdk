@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from viksa_ai.runtime.inject import to_module_source
+from maeyr.runtime.inject import to_module_source
 
-FIXTURE = Path(__file__).parent / "fixtures" / "ViksaAI.py.expected"
+FIXTURE = Path(__file__).parent / "fixtures" / "Maeyr.py.expected"
 
 
 def test_to_module_source_matches_platform_fixture():
