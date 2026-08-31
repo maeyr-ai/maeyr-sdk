@@ -2,8 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/maeyr)](https://pypi.org/project/maeyr/)
 [![Python](https://img.shields.io/pypi/pyversions/maeyr)](https://pypi.org/project/maeyr/)
-[![License](https://img.shields.io/github/license/maeyr/maeyr-sdk)](https://github.com/maeyr/maeyr-sdk/blob/main/LICENSE)
-[![CI](https://github.com/maeyr/maeyr-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/maeyr/maeyr-sdk/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/maeyr-ai/maeyr-sdk)](https://github.com/maeyr-ai/maeyr-sdk/blob/main/LICENSE)
+[![CI](https://github.com/maeyr-ai/maeyr-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/maeyr-ai/maeyr-sdk/actions/workflows/ci.yml)
 
 Official Python SDK for the [Maeyr](https://maeyr.com) platform. Use it to author agents locally, call platform APIs from scripts and automation, and validate agent manifests before deploy.
 
@@ -694,7 +694,7 @@ Run locally after `pip install -e .` and `pip install httpx`.
 ## Contributing
 
 ```bash
-git clone git@github.com:maeyr/maeyr-sdk.git
+git clone git@github.com:maeyr-ai/maeyr-sdk.git
 cd maeyr-sdk
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"

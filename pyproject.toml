@@ -47,8 +47,8 @@ maeyr-mcp-bridge = "maeyr.mcp_bridge.cli:main"
 [project.urls]
 Homepage = "https://maeyr.com"
 Documentation = "https://docs.maeyr.com"
-Repository = "https://github.com/maeyr/maeyr-sdk"
-Issues = "https://github.com/maeyr/maeyr-sdk/issues"
+Repository = "https://github.com/maeyr-ai/maeyr-sdk"
+Issues = "https://github.com/maeyr-ai/maeyr-sdk/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

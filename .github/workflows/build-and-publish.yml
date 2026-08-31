@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  packages: write
 
 jobs:
   test-before-release:
@@ -88,6 +90,15 @@ jobs:
           # When PyPI trusted publishing is configured for this repo, omit the token.
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+
+      - name: Create GitHub Release and Upload Distribution Assets
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          generate_release_notes: true
 
   sync-release-tag:
     name: Sync git release tag
