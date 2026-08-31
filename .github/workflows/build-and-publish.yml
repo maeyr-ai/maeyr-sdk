@@ -1,6 +1,4 @@
-# Adapted from https://github.com/Srirammkm/jsonQ (.github/workflows/build-and-publish.yaml.bkp)
-# Publishes only the public maeyr SDK. The application-only platform runtime
-# is deliberately excluded from every package-registry publishing path.
+# Publishes the official maeyr Python SDK to PyPI and GitHub Releases.
 
 name: Build and Publish maeyr to PyPI
 

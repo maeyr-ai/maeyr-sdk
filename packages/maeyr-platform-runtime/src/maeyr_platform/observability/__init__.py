@@ -1,1 +1,0 @@
-"""Shared service observability adapters."""
