@@ -190,10 +190,7 @@ def _channel_access_key(
     # Connector identities are customer PII. Keep them out of Redis key names
     # while retaining an O(1), tenant-isolated lookup.
     digest = hashlib.sha256(subject.encode("utf-8")).hexdigest()
-    return (
-        f"volt:channel_access:{account_id}:{org_id}:{project_id}:"
-        f"{channel}:{digest}"
-    )
+    return f"volt:channel_access:{account_id}:{org_id}:{project_id}:{channel}:{digest}"
 
 
 async def get_channel_access_cache(

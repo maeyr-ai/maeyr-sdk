@@ -195,9 +195,10 @@ async def enqueue_span(doc: Dict[str, Any]) -> bool:
             if admitted:
                 return True
             _redis_queue_full_rejections += 1
-            if _redis_queue_full_rejections == 1 or (
-                _redis_queue_full_rejections & (_redis_queue_full_rejections - 1)
-            ) == 0:
+            if (
+                _redis_queue_full_rejections == 1
+                or (_redis_queue_full_rejections & (_redis_queue_full_rejections - 1)) == 0
+            ):
                 logger.error(
                     "trace Redis queue full rejected=%d max=%d",
                     _redis_queue_full_rejections,
@@ -319,9 +320,7 @@ async def acknowledge_spans(docs: List[Dict[str, Any]]) -> int:
         for doc in docs:
             raw = getattr(doc, "redis_payload", None)
             if raw is not None:
-                acknowledged += int(
-                    await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0
-                )
+                acknowledged += int(await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0)
         _mark_redis_available()
     except Exception:
         _mark_redis_unavailable()
@@ -354,9 +353,7 @@ async def release_spans(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             # operations may duplicate one span, which canonical upserts handle;
             # the reverse order could lose it permanently.
             await redis.lpush(REDIS_QUEUE_KEY, raw)
-            removed = int(
-                await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0
-            )
+            removed = int(await redis.lrem(REDIS_PROCESSING_QUEUE_KEY, 1, raw) or 0)
             if removed < 1:
                 # Another recovery worker may already have transferred it. It
                 # remains durable in Redis, so no local fallback is required.

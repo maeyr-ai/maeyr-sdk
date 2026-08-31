@@ -14,7 +14,7 @@ from .ids import generate_span_id, generate_trace_id, normalize_span_id, normali
 from .labels import derive_labels
 from .sampling import should_sample
 from .semconv import enrich_span_attributes, operation_for_span_name
-from .tenant import span_ref, valid_span_tenant_scope
+from .tenant import span_ref, valid_span_tenant_scope, valid_tenant_id
 from .transport import enqueue_span, get_transport_stats, re_enqueue_spans
 
 logger = logging.getLogger("platform_traces.recorder")

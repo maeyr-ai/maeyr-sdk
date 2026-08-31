@@ -31,53 +31,69 @@ def build_cost_rollup_match_filter(
     if user_id:
         match["user_id"] = user_id
     if user_email and str(user_email).strip():
-        alternatives.append([
-            {"user_email": str(user_email).strip()},
-            {"resource_refs.user_email": str(user_email).strip()},
-            {"resource_refs.slack_user_email": str(user_email).strip()},
-        ])
+        alternatives.append(
+            [
+                {"user_email": str(user_email).strip()},
+                {"resource_refs.user_email": str(user_email).strip()},
+                {"resource_refs.slack_user_email": str(user_email).strip()},
+            ]
+        )
     aid = str(agent_id).strip() if agent_id else ""
     if aid:
-        alternatives.append([
-            {"metadata.agent_ids": aid},
-            {"resource_refs.agent_ids": aid},
-            {"resource_refs.agent_id": aid},
-        ])
+        alternatives.append(
+            [
+                {"metadata.agent_ids": aid},
+                {"resource_refs.agent_ids": aid},
+                {"resource_refs.agent_id": aid},
+            ]
+        )
     if workforce_id and str(workforce_id).strip():
-        alternatives.append([
-            {"metadata.workforce_id": str(workforce_id).strip()},
-            {"resource_refs.workforce_id": str(workforce_id).strip()},
-        ])
+        alternatives.append(
+            [
+                {"metadata.workforce_id": str(workforce_id).strip()},
+                {"resource_refs.workforce_id": str(workforce_id).strip()},
+            ]
+        )
     if trigger_id and str(trigger_id).strip():
-        alternatives.append([
-            {"resource_refs.trigger_id": str(trigger_id).strip()},
-            {"resource_id": str(trigger_id).strip(), "resource_type": "trigger_execution"},
-        ])
+        alternatives.append(
+            [
+                {"resource_refs.trigger_id": str(trigger_id).strip()},
+                {"resource_id": str(trigger_id).strip(), "resource_type": "trigger_execution"},
+            ]
+        )
     if schedule_id and str(schedule_id).strip():
-        alternatives.append([
-            {"resource_refs.schedule_id": str(schedule_id).strip()},
-            {"resource_id": str(schedule_id).strip(), "resource_type": "schedule_execution"},
-        ])
+        alternatives.append(
+            [
+                {"resource_refs.schedule_id": str(schedule_id).strip()},
+                {"resource_id": str(schedule_id).strip(), "resource_type": "schedule_execution"},
+            ]
+        )
     if conversation_id and str(conversation_id).strip():
-        alternatives.append([
-            {"resource_refs.conversation_id": str(conversation_id).strip()},
-            {"resource_id": str(conversation_id).strip(), "resource_type": "chat"},
-        ])
+        alternatives.append(
+            [
+                {"resource_refs.conversation_id": str(conversation_id).strip()},
+                {"resource_id": str(conversation_id).strip(), "resource_type": "chat"},
+            ]
+        )
     if execution_id and str(execution_id).strip():
-        alternatives.append([
-            {"resource_refs.execution_id": str(execution_id).strip()},
-            {"resource_id": str(execution_id).strip()},
-        ])
+        alternatives.append(
+            [
+                {"resource_refs.execution_id": str(execution_id).strip()},
+                {"resource_id": str(execution_id).strip()},
+            ]
+        )
     if ref_key and ref_id and str(ref_id).strip():
         rk = str(ref_key).strip()
         rid = str(ref_id).strip()
         if rk not in RESOURCE_REF_KEYS:
             raise ValueError("unsupported resource reference key")
         if rk == "agent_id" or rk == "agent_ids":
-            alternatives.append([
-                {"resource_refs.agent_ids": rid},
-                {"resource_refs.agent_id": rid},
-            ])
+            alternatives.append(
+                [
+                    {"resource_refs.agent_ids": rid},
+                    {"resource_refs.agent_id": rid},
+                ]
+            )
         else:
             match[f"resource_refs.{rk}"] = rid
     # Each filter dimension is ANDed. Only aliases within that dimension are

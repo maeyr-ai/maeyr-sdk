@@ -153,9 +153,10 @@ class _ReliableRedis:
         processing_key = str(args[1])
         payload = args[2]
         maximum = int(cast(int, args[3]))
-        if len(self.queues.get(pending_key, [])) + len(
-            self.queues.get(processing_key, [])
-        ) >= maximum:
+        if (
+            len(self.queues.get(pending_key, [])) + len(self.queues.get(processing_key, []))
+            >= maximum
+        ):
             return 0
         await self.lpush(pending_key, payload)
         return 1

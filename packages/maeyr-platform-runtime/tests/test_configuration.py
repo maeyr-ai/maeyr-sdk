@@ -10,9 +10,7 @@ from maeyr_platform.configuration import (
 
 
 def test_allowed_origins_uses_local_defaults_outside_production() -> None:
-    assert allowed_origins_from_env("development", environ={}) == list(
-        LOCAL_BROWSER_ORIGINS
-    )
+    assert allowed_origins_from_env("development", environ={}) == list(LOCAL_BROWSER_ORIGINS)
 
 
 def test_allowed_origins_requires_explicit_production_configuration() -> None:
@@ -57,12 +55,15 @@ def test_allowed_origins_rejects_malformed_configuration(raw: str) -> None:
 
 
 def test_deployment_service_url_uses_local_default() -> None:
-    assert deployment_service_url(
-        "AUTH_SERVICE_URL",
-        environment="development",
-        local_port=8000,
-        environ={},
-    ) == "http://localhost:8000"
+    assert (
+        deployment_service_url(
+            "AUTH_SERVICE_URL",
+            environment="development",
+            local_port=8000,
+            environ={},
+        )
+        == "http://localhost:8000"
+    )
 
 
 def test_deployment_service_url_requires_production_configuration() -> None:
@@ -76,12 +77,15 @@ def test_deployment_service_url_requires_production_configuration() -> None:
 
 
 def test_deployment_service_url_normalizes_trailing_slash() -> None:
-    assert deployment_service_url(
-        "AUTH_SERVICE_URL",
-        environment="production",
-        local_port=8000,
-        environ={"AUTH_SERVICE_URL": "https://auth.internal/"},
-    ) == "https://auth.internal"
+    assert (
+        deployment_service_url(
+            "AUTH_SERVICE_URL",
+            environment="production",
+            local_port=8000,
+            environ={"AUTH_SERVICE_URL": "https://auth.internal/"},
+        )
+        == "https://auth.internal"
+    )
 
 
 @pytest.mark.parametrize(

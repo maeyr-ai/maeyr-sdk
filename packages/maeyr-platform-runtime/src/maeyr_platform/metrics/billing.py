@@ -69,10 +69,7 @@ def effective_usage_billing_status(document: Mapping[str, Any]) -> str:
     """Recompute the authoritative status of one immutable ledger event."""
     if document.get("credential_source") == "customer":
         return "non_billable"
-    has_cost = (
-        document.get("cost_nanos_usd") is not None
-        or document.get("cost_usd") is not None
-    )
+    has_cost = document.get("cost_nanos_usd") is not None or document.get("cost_usd") is not None
     usage_status = str(document.get("usage_status") or "")
     if (
         not has_cost
@@ -85,8 +82,7 @@ def effective_usage_billing_status(document: Mapping[str, Any]) -> str:
     pricing_is_estimate = bool(
         isinstance(pricing, Mapping)
         and (
-            pricing.get("billing_eligible") is False
-            or pricing.get("source") == "platform_estimate"
+            pricing.get("billing_eligible") is False or pricing.get("source") == "platform_estimate"
         )
     )
     if document.get("estimated") is True or usage_status == "estimated" or pricing_is_estimate:
@@ -171,9 +167,7 @@ def build_agent_allocations(document: Mapping[str, Any]) -> list[dict[str, Any]]
     if not isinstance(raw_ids, (list, tuple, set)):
         raw_ids = [raw_ids]
     raw_ids = [*raw_ids, refs.get("agent_id")]
-    agent_ids = sorted(
-        {str(value).strip() for value in raw_ids if str(value or "").strip()}
-    )
+    agent_ids = sorted({str(value).strip() for value in raw_ids if str(value or "").strip()})
     if not agent_ids:
         return []
 
@@ -187,9 +181,7 @@ def build_agent_allocations(document: Mapping[str, Any]) -> list[dict[str, Any]]
     else:
         total_parts = _split_integer(int(document.get("tokens_used") or 0), len(agent_ids))
     cost_parts = _split_integer(document.get("cost_nanos_usd"), len(agent_ids))
-    estimated_cost_parts = _split_integer(
-        document.get("estimated_cost_nanos_usd"), len(agent_ids)
-    )
+    estimated_cost_parts = _split_integer(document.get("estimated_cost_nanos_usd"), len(agent_ids))
     call_parts = _split_integer(1_000_000_000, len(agent_ids))
 
     return [
@@ -304,9 +296,7 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
         try:
             numeric = Decimal(str(raw_value))
         except (InvalidOperation, TypeError, ValueError) as exc:
-            raise ValueError(
-                f"token detail {name} must be a non-negative integer"
-            ) from exc
+            raise ValueError(f"token detail {name} must be a non-negative integer") from exc
         if not numeric.is_finite() or numeric < 0 or numeric != numeric.to_integral_value():
             raise ValueError(f"token detail {name} must be a non-negative integer")
         token_details[name] = int(numeric)
@@ -345,18 +335,22 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
     )
     doc["service"] = doc.get("service") or metadata.get("service")
 
-    credential_source = str(
-        doc.get("credential_source") or metadata.get("credential_source") or "platform"
-    ).strip().lower()
+    credential_source = (
+        str(doc.get("credential_source") or metadata.get("credential_source") or "platform")
+        .strip()
+        .lower()
+    )
     if credential_source not in {"platform", "customer"}:
         raise ValueError("credential_source must be platform or customer")
     doc["credential_source"] = credential_source
     # Producer booleans are not authoritative. Only the credentials selected
     # by the universal runtime decide whether the call is chargeable.
     doc["billable_to_customer"] = credential_source == "platform"
-    source_scope = str(
-        doc.get("llm_source_scope") or metadata.get("llm_source_scope") or "platform"
-    ).strip().lower()
+    source_scope = (
+        str(doc.get("llm_source_scope") or metadata.get("llm_source_scope") or "platform")
+        .strip()
+        .lower()
+    )
     if source_scope not in {"platform", "account", "organization", "project"}:
         raise ValueError("llm_source_scope is invalid")
     if credential_source == "customer" and source_scope == "platform":
@@ -376,8 +370,7 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
     pricing_is_estimate = bool(
         isinstance(pricing, Mapping)
         and (
-            pricing.get("billing_eligible") is False
-            or pricing.get("source") == "platform_estimate"
+            pricing.get("billing_eligible") is False or pricing.get("source") == "platform_estimate"
         )
     )
     estimated = bool(doc.get("estimated") or pricing_is_estimate)
@@ -401,9 +394,7 @@ def canonicalize_usage_event(document: Mapping[str, Any]) -> dict[str, Any]:
         if estimated_nanos is None:
             estimated_nanos = doc.get("cost_nanos_usd")
         if estimated_nanos is None:
-            estimated_nanos = usd_to_nanos(
-                doc.get("estimated_cost_usd") or doc.get("cost_usd")
-            )
+            estimated_nanos = usd_to_nanos(doc.get("estimated_cost_usd") or doc.get("cost_usd"))
         if estimated_nanos is not None:
             estimated_nanos = int(estimated_nanos)
             if estimated_nanos < 0:

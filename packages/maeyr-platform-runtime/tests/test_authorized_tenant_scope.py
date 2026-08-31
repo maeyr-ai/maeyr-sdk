@@ -51,9 +51,7 @@ def test_context_permission_is_pinned_to_the_exact_project() -> None:
         "project_id": "PI-A",
     }
     with pytest.raises(HTTPException):
-        permission_data_scope(
-            _user(), "analytics", "view", project_id="PI-B"
-        )
+        permission_data_scope(_user(), "analytics", "view", project_id="PI-B")
 
 
 def test_organization_permission_can_narrow_to_a_project_in_its_org() -> None:
@@ -84,7 +82,5 @@ def test_account_permission_may_span_the_account_database() -> None:
 
 def test_missing_permission_fails_closed() -> None:
     with pytest.raises(HTTPException) as exc:
-        permission_data_scope(
-            _user(context=False), "analytics", "view"
-        )
+        permission_data_scope(_user(context=False), "analytics", "view")
     assert exc.value.status_code == 403

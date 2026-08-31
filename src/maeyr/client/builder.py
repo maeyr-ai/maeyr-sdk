@@ -61,9 +61,7 @@ class _AgentsClient:
         )
 
     async def delete(self, agent_id: str) -> AgentDeletionResult:
-        payload = await self._builder._client._arequest(
-            "DELETE", _BUILDER, f"/agent/{agent_id}"
-        )
+        payload = await self._builder._client._arequest("DELETE", _BUILDER, f"/agent/{agent_id}")
         return AgentDeletionResult.model_validate(payload)
 
     async def set_status(self, agent_id: str, *, enabled: bool) -> Dict[str, Any]:
@@ -92,6 +90,7 @@ class _AgentsClient:
         return await self._builder._client._arequest(
             "GET", _BUILDER, f"/agent/{agent_id}/revisions/{revision_id}"
         )
+
 
 class _DeployClient:
     def __init__(self, builder: BuilderClient) -> None:

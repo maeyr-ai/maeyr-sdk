@@ -111,9 +111,7 @@ def has_permission(
             if not isinstance(raw_module, str) or not raw_module.strip() or deny_actions is None:
                 return False
             deny_module = _canonical_module(raw_module)
-            if deny_module in {module, "*"} and (
-                action in deny_actions or "*" in deny_actions
-            ):
+            if deny_module in {module, "*"} and (action in deny_actions or "*" in deny_actions):
                 return False
         elif isinstance(deny, str):
             # Simple string deny format: "module:action"
@@ -258,10 +256,7 @@ def require_admin() -> Callable[..., Awaitable[Dict[str, Any]]]:
     ) -> Dict[str, Any]:
         access_data = current_user.get("access", {})
 
-        if not (
-            access_data.get("is_admin") is True
-            or access_data.get("is_account_owner") is True
-        ):
+        if not (access_data.get("is_admin") is True or access_data.get("is_account_owner") is True):
             user_id = (
                 current_user.get("user_id")
                 or current_user.get("sub")

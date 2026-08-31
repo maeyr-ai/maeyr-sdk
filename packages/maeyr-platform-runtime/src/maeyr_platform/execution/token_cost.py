@@ -113,9 +113,7 @@ class ModelPrice:
         billable_units: Mapping[str, UnitPrice] | None = None,
     ) -> None:
         prompt = (
-            _decimal(prompt_per_1k, label="prompt_per_1k")
-            if prompt_per_1k is not None
-            else None
+            _decimal(prompt_per_1k, label="prompt_per_1k") if prompt_per_1k is not None else None
         )
         completion = (
             _decimal(completion_per_1k, label="completion_per_1k")

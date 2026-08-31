@@ -56,7 +56,7 @@ def test_aws_kms_uses_ambient_identity_without_static_credentials() -> None:
     )
 
     assert result is not None
-    assert calls == [(('kms',), {"region_name": "ap-south-1"})]
+    assert calls == [(("kms",), {"region_name": "ap-south-1"})]
 
 
 def test_aws_kms_passes_complete_explicit_credentials() -> None:

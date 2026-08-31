@@ -88,9 +88,7 @@ class AuthLLMConfigurationResolver:
                 timeout=self._timeout,
             )
             if response.status_code != 200:
-                raise LLMConfigurationError(
-                    self._status_message(response.status_code)
-                )
+                raise LLMConfigurationError(self._status_message(response.status_code))
             raw = response.json()
         except LLMConfigurationError:
             raise

@@ -91,11 +91,7 @@ class ResolvedLLMConfiguration(BaseModel):
     @field_validator("models")
     @classmethod
     def validate_models(cls, value: Mapping[str, str]) -> Mapping[str, str]:
-        clean = {
-            str(key): str(model).strip()
-            for key, model in value.items()
-            if str(model).strip()
-        }
+        clean = {str(key): str(model).strip() for key, model in value.items() if str(model).strip()}
         if LLMCapability.CHAT.value not in clean:
             raise ValueError("chat model is required")
         return MappingProxyType(clean)

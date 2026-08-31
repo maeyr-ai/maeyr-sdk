@@ -26,8 +26,7 @@ def test_decomposed_contract_escapes_credentials_and_supports_replica_sets() -> 
     )
 
     assert resolved.startswith(
-        "mongodb://service%40example.com:p%40ss%2Fword@"
-        "mongo-0.mongo:27017,mongo-1.mongo:27017/"
+        "mongodb://service%40example.com:p%40ss%2Fword@mongo-0.mongo:27017,mongo-1.mongo:27017/"
     )
     assert "replicaSet=rs+platform" in resolved
     assert "authSource=admin" in resolved
@@ -42,9 +41,7 @@ def test_srv_and_mounted_tls_files_are_projected_without_rewriting_uri() -> None
         }
     )
 
-    assert resolved.startswith(
-        "mongodb+srv://cluster.mongodb.net/application?appName=api&tls=true"
-    )
+    assert resolved.startswith("mongodb+srv://cluster.mongodb.net/application?appName=api&tls=true")
     assert "tlsCAFile=%2Fvar%2Frun%2Fsecrets%2Fmongo%2Fca.pem" in resolved
     assert "tlsCertificateKeyFile=%2Fvar%2Frun%2Fsecrets%2Fmongo%2Fclient.pem" in resolved
 

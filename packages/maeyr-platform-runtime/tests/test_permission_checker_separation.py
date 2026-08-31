@@ -55,24 +55,14 @@ def test_directory_read_access_cannot_mutate_execute_or_export() -> None:
 
 def test_permission_grants_are_scoped_to_the_requested_level() -> None:
     access = _access("billing", "view")
-    access["organization_permissions"] = [
-        {"module": "billing", "actions": ["export"]}
-    ]
-    access["account_permissions"] = [
-        {"module": "billing", "actions": ["manage"]}
-    ]
+    access["organization_permissions"] = [{"module": "billing", "actions": ["export"]}]
+    access["account_permissions"] = [{"module": "billing", "actions": ["manage"]}]
 
     assert has_permission(access, "billing", "view") is True
     assert has_permission(access, "billing", "export") is False
-    assert (
-        has_permission(access, "billing", "export", grant_scope="organization")
-        is True
-    )
+    assert has_permission(access, "billing", "export", grant_scope="organization") is True
     assert has_permission(access, "billing", "manage") is False
-    assert (
-        has_permission(access, "billing", "manage", grant_scope="account")
-        is True
-    )
+    assert has_permission(access, "billing", "manage", grant_scope="account") is True
 
 
 def test_wildcard_or_similar_action_names_do_not_escalate() -> None:

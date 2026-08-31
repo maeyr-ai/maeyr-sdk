@@ -56,11 +56,7 @@ def test_resource_and_access_projections_are_canonical() -> None:
         "orgs": [
             {
                 "org_id": "org-1",
-                "org_role": {
-                    "permissions": [
-                        {"module": "access_control", "actions": ["manage"]}
-                    ]
-                },
+                "org_role": {"permissions": [{"module": "access_control", "actions": ["manage"]}]},
                 "projects": [{"project_id": "project-1"}],
             }
         ]
@@ -77,9 +73,7 @@ def test_sso_access_projections_fail_closed_for_legacy_and_malformed_grants() ->
             {
                 "org_id": "org-1",
                 "org_role": {
-                    "permissions": [
-                        {"module": "organization", "actions": ["admin", "all"]}
-                    ]
+                    "permissions": [{"module": "organization", "actions": ["admin", "all"]}]
                 },
             }
         ]

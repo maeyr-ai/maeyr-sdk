@@ -108,10 +108,7 @@ DEFAULT_RESOURCE_USAGE: Mapping[str, int] = MappingProxyType(
 def validate_resource_limit(value: object) -> bool:
     """Return whether a stored or requested limit has canonical semantics."""
 
-    return (
-        type(value) is int
-        and UNLIMITED <= value <= MAX_RESOURCE_VALUE
-    )
+    return type(value) is int and UNLIMITED <= value <= MAX_RESOURCE_VALUE
 
 
 def effective_child_limit(parent: int, child: int) -> int:

@@ -17,7 +17,10 @@ def test_resolve_gateway_url_with_agent_alias():
 
 
 def test_resolve_gateway_url_explicit_override():
-    assert resolve_gateway_url(gateway_url="https://custom.example/mcp/") == "https://custom.example/mcp"
+    assert (
+        resolve_gateway_url(gateway_url="https://custom.example/mcp/")
+        == "https://custom.example/mcp"
+    )
 
 
 def test_resolve_mcp_token_from_explicit():

@@ -266,8 +266,7 @@ async def _validate_credential_with_retries(
 
         if attempt < retries:
             logger.warning(
-                "Auth request transient failure; retrying attempt=%s/%s "
-                "error_type=%s delay=%.1fs",
+                "Auth request transient failure; retrying attempt=%s/%s error_type=%s delay=%.1fs",
                 attempt,
                 retries,
                 type(last_error).__name__ if last_error is not None else "unknown",

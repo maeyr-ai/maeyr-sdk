@@ -127,8 +127,7 @@ class AgentEndpoint(BaseModel):
     annotations: Optional[Dict[str, Any]] = Field(
         None,
         description=(
-            "Optional MCP-style hints about endpoint behavior "
-            "(readOnly, destructive, idempotent)"
+            "Optional MCP-style hints about endpoint behavior (readOnly, destructive, idempotent)"
         ),
     )
     approval_policy: str = Field(

@@ -2,8 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-
 from fastapi import HTTPException
+
 from maeyr_platform.usage_limits import UsageLimitClient, enforce_limit, usage_control
 
 

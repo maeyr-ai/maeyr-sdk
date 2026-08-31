@@ -25,9 +25,7 @@ def test_sse_decoder_supports_multiline_events_and_done_marker() -> None:
         text=': keepalive\ndata: {"type": "result",\ndata: "ok": true}\n\ndata: [DONE]\n\n',
     )
 
-    assert list(MaeyrClient.iter_sse_lines(response)) == [
-        {"type": "result", "ok": True}
-    ]
+    assert list(MaeyrClient.iter_sse_lines(response)) == [{"type": "result", "ok": True}]
 
 
 def test_sse_decoder_rejects_malformed_events_instead_of_losing_them() -> None:
@@ -48,10 +46,7 @@ async def test_authenticated_async_stream_uses_strict_sse_framing() -> None:
     async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
         client = MaeyrClient("token", base_url="https://api.test")
         client._transport._async_client = http
-        events = [
-            event
-            async for event in client._astream("GET", "/chat", "/events")
-        ]
+        events = [event async for event in client._astream("GET", "/chat", "/events")]
 
     assert events == [{"type": "delta", "text": "hello"}]
 

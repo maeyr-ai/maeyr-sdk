@@ -45,9 +45,7 @@ def extract_project_ids(access: dict[str, Any]) -> list[str]:
     return identifiers
 
 
-def has_org_permission(
-    access: dict[str, Any], org_id: str, module: str, action: str
-) -> bool:
+def has_org_permission(access: dict[str, Any], org_id: str, module: str, action: str) -> bool:
     """Check one exact organization-role permission.
 
     Wildcards and legacy aliases are deliberately not expanded here.  The Auth

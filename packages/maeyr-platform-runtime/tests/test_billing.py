@@ -107,9 +107,7 @@ def test_unpriced_or_unobserved_provider_call_is_flagged_for_reconciliation():
 
 def test_billable_fact_change_changes_fingerprint_but_not_provider_identity():
     first = canonicalize_usage_event(_event())
-    changed = canonicalize_usage_event(
-        _event(prompt_tokens=6, completion_tokens=4, tokens_used=10)
-    )
+    changed = canonicalize_usage_event(_event(prompt_tokens=6, completion_tokens=4, tokens_used=10))
 
     assert first["_id"] == changed["_id"]
     assert first["payload_fingerprint"] != changed["payload_fingerprint"]
@@ -141,9 +139,7 @@ def test_non_token_billable_units_are_retained_for_reconciliation():
 
 def test_billable_units_reject_invalid_values():
     with pytest.raises(ValueError, match="finite and non-negative"):
-        canonicalize_usage_event(
-            _event(billable_units={"audio_seconds": float("nan")})
-        )
+        canonicalize_usage_event(_event(billable_units={"audio_seconds": float("nan")}))
 
 
 @pytest.mark.parametrize("value", [-1, 1.5, True, float("nan")])
@@ -351,9 +347,7 @@ def test_detail_larger_than_provider_total_requires_reconciliation(monkeypatch):
     )
 
     assert result.cost_usd is None
-    assert result.uncovered_dimensions == (
-        "token_details.prompt_cached_tokens:exceeds_prompt",
-    )
+    assert result.uncovered_dimensions == ("token_details.prompt_cached_tokens:exceeds_prompt",)
 
 
 def test_customer_llm_usage_is_visible_but_never_billable():

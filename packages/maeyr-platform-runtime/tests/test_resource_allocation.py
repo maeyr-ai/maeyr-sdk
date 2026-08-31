@@ -87,9 +87,7 @@ def test_resolve_hierarchy_rejects_noncanonical_storage(bad: object) -> None:
 def test_retained_operation_id_is_stable_bounded_and_does_not_expose_entity() -> None:
     operation_id = retained_operation_id("secure-worker", "WK/customer supplied id")
 
-    assert operation_id == retained_operation_id(
-        "secure-worker", "WK/customer supplied id"
-    )
+    assert operation_id == retained_operation_id("secure-worker", "WK/customer supplied id")
     assert operation_id.startswith("secure-worker:")
     assert "customer" not in operation_id
     assert len(operation_id) <= 128
@@ -99,9 +97,7 @@ def test_retained_operation_id_is_stable_bounded_and_does_not_expose_entity() ->
     ("kind", "entity_id"),
     [("", "id"), ("UPPER", "id"), ("bad_kind", "id"), ("worker", "")],
 )
-def test_retained_operation_id_rejects_invalid_inputs(
-    kind: str, entity_id: str
-) -> None:
+def test_retained_operation_id_rejects_invalid_inputs(kind: str, entity_id: str) -> None:
     with pytest.raises(ValueError):
         retained_operation_id(kind, entity_id)
 

@@ -91,9 +91,7 @@ class UniversalLLMClient(Generic[ClientT]):
         capability: LLMCapability | str = LLMCapability.CHAT,
     ) -> ResolvedClient[ClientT]:
         selected_capability = (
-            capability
-            if isinstance(capability, LLMCapability)
-            else LLMCapability(str(capability))
+            capability if isinstance(capability, LLMCapability) else LLMCapability(str(capability))
         )
         config = await self._resolve(scope, selected_capability)
         model = config.model_for(selected_capability)
@@ -149,9 +147,7 @@ class UniversalLLMClient(Generic[ClientT]):
             self._resolution_cache.pop(key, None)
             task = self._resolution_inflight.get(key)
             if task is None:
-                task = asyncio.create_task(
-                    self._resolve_and_cache(key, scope, capability)
-                )
+                task = asyncio.create_task(self._resolve_and_cache(key, scope, capability))
                 self._resolution_inflight[key] = task
         # A cancelled HTTP request must not cancel the shared resolution that
         # other requests for this tenant are already awaiting.

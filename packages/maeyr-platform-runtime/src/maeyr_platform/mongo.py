@@ -43,14 +43,8 @@ def _validate_mongo_uri(uri: str) -> None:
     if any(character.isspace() for character in uri):
         raise ValueError("MONGODB_URI must not contain whitespace")
     parsed = urlsplit(uri)
-    if (
-        parsed.scheme.lower() not in _MONGO_SCHEMES
-        or not parsed.netloc
-        or parsed.fragment
-    ):
-        raise ValueError(
-            "MONGODB_URI must be a complete mongodb:// or mongodb+srv:// URI"
-        )
+    if parsed.scheme.lower() not in _MONGO_SCHEMES or not parsed.netloc or parsed.fragment:
+        raise ValueError("MONGODB_URI must be a complete mongodb:// or mongodb+srv:// URI")
 
 
 def _append_uri_options(uri: str, options: list[tuple[str, str]]) -> str:
@@ -83,17 +77,13 @@ def _mongo_tls_options(environment: Mapping[str, str]) -> list[tuple[str, str]]:
             "MONGO_TLS_CERT_FILE must reference a combined certificate/key PEM; "
             "a separate MONGO_TLS_KEY_FILE is not supported by PyMongo"
         )
-    allow_invalid = _environment_boolean(
-        environment, "MONGO_TLS_ALLOW_INVALID_CERTIFICATES"
-    )
+    allow_invalid = _environment_boolean(environment, "MONGO_TLS_ALLOW_INVALID_CERTIFICATES")
     production = (environment.get("APP_ENVIRONMENT") or "").strip().lower() in {
         "prod",
         "production",
     }
     if allow_invalid and production:
-        raise ValueError(
-            "MONGO_TLS_ALLOW_INVALID_CERTIFICATES is forbidden in production"
-        )
+        raise ValueError("MONGO_TLS_ALLOW_INVALID_CERTIFICATES is forbidden in production")
     tls_enabled = _environment_boolean(environment, "MONGO_TLS_ENABLED")
     tls_enabled = tls_enabled or bool(ca_file or certificate_file or allow_invalid)
     if not tls_enabled:
@@ -127,9 +117,7 @@ def mongo_connection_uri(environment: Mapping[str, str] | None = None) -> str:
 
     host = _environment_value(values, "MONGO_HOST")
     if not host:
-        raise ValueError(
-            "MongoDB is not configured; set MONGODB_URI or MONGO_HOST"
-        )
+        raise ValueError("MongoDB is not configured; set MONGODB_URI or MONGO_HOST")
     if (
         "://" in host
         or any(character.isspace() for character in host)
