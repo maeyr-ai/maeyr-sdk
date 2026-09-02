@@ -39,7 +39,7 @@ jobs:
           ruff format --check src tests
 
       - name: Pytest
-        run: pytest --cov=maeyr --cov-report=term-missing
+        run: PYTHONPATH=. pytest --cov=maeyr --cov-report=term-missing
 
       - name: Validate package import
         run: |
