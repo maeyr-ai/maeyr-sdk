@@ -1,0 +1,7 @@
+# SDK testing
+
+On 2026-10-02, a fresh isolated Python 3.12 environment passed the public SDK suite (**60 tests**) and private runtime suite (**309 tests**), including bounded trace-task and wheel-content tests. A second lowest-direct-dependency resolution with MCP 1.28.1, FastAPI 0.109.1, and python-json-logger 4.0.0 also passed both suites. Public and private runtime Ruff passed; strict Mypy passed on all 35 public and 129 private source files in the latest resolution; `uv pip check` found 84 compatible installed packages. Both suites run in CI and the PyPI release gate; those workflow changes were parsed locally but not executed remotely.
+
+`.github/workflows/ci.yml` installs the private runtime and runs its Ruff/pytest after public SDK checks on Python 3.10, 3.11, and 3.12. `build-and-publish.yml` repeats those gates on Python 3.12, audits dependencies declared by both package manifests and the public MCP optional extra with pip-audit 2.10.1, builds the public wheel, and verifies distribution contents before PyPI. The release Ruff gate is pinned to 0.15.16. The local resolved release audit and a direct-minimum advisory audit passed on 2026-10-02; remote workflow execution remains unverified.
+
+Integration validation remains: install built wheels in clean environments, run representative service suites at pinned SHAs, exercise a slow trace sink, and verify retry/idempotency behavior against a test server. No live sink, load run, or PyPI publish was performed.

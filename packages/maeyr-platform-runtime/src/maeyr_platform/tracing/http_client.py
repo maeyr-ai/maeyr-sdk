@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Mapping, MutableMapping, Optional, Union
@@ -10,6 +9,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from ._tasks import schedule_trace_task
 from .constants import SPAN_HTTP_CLIENT, SpanKind, SpanOperation
 from .context import get_trace_context
 from .ids import generate_span_id, normalize_span_id
@@ -83,7 +83,7 @@ def schedule_http_client_span(
             resource_refs=ctx.resource_refs,
         )
 
-    asyncio.create_task(_emit(), name="http_client_span")
+    schedule_trace_task(_emit, name="http_client_span")
 
 
 async def _bounded_httpx_request(

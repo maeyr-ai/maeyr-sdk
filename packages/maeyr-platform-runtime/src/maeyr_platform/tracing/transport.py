@@ -10,6 +10,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from datetime import datetime, timezone
 from typing import Any, Deque, Dict, List, Optional, cast
 
+from ._tasks import schedule_trace_task
 from .constants import REDIS_PROCESSING_QUEUE_KEY, REDIS_QUEUE_KEY
 
 logger = logging.getLogger("platform_traces.transport")
@@ -26,6 +27,7 @@ _redis_queue_full_rejections: int = 0
 _durable_fallback_accepts: int = 0
 _durable_fallback_failures: int = 0
 _recovery_required: bool = True
+_dead_letter_drain_task: Optional[asyncio.Task[None]] = None
 
 
 class _ReservedSpan(dict[str, Any]):
@@ -100,13 +102,19 @@ def _mark_redis_available() -> None:
 
 def _schedule_dead_letter_drain() -> None:
     """Fire-and-forget drain when Redis recovers and dead-letter backlog exists."""
+    global _dead_letter_drain_task
     if not _dead_letter_memory:
         return
+    if _dead_letter_drain_task is not None and not _dead_letter_drain_task.done():
+        return
     try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(drain_dead_letter_memory(), name="trace_dead_letter_drain")
+        asyncio.get_running_loop()
     except RuntimeError:
-        pass
+        return
+    _dead_letter_drain_task = schedule_trace_task(
+        drain_dead_letter_memory,
+        name="trace_dead_letter_drain",
+    )
 
 
 def _doc_to_redis(doc: Dict[str, Any]) -> str:
@@ -209,7 +217,8 @@ async def enqueue_span(doc: Dict[str, Any]) -> bool:
     if await _persist_externally(doc):
         return True
     if _http_fallback:
-        asyncio.create_task(_http_fallback(doc), name="trace_span_http_fallback")
+        fallback = _http_fallback
+        schedule_trace_task(lambda: fallback(doc), name="trace_span_http_fallback")
     return False
 
 

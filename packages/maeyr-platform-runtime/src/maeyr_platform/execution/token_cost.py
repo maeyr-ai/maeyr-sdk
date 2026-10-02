@@ -169,7 +169,7 @@ def _parse_unit_price(name: str, raw: Any) -> UnitPrice:
     if not isinstance(raw, Mapping):
         raise ValueError(f"billable_units.{name} must be an object")
     if "per_unit" in raw:
-        return UnitPrice(price=raw["per_unit"], unit_size=1)
+        return UnitPrice(price=raw["per_unit"], unit_size=Decimal(1))
     return UnitPrice(price=raw["price"], unit_size=raw.get("unit_size", 1))
 
 
@@ -327,8 +327,8 @@ def compute_usage_cost_usd(
         if count > 0:
             details[str(raw_name)] = count
     units: dict[str, Decimal] = {}
-    for raw_name, raw_value in dict(billable_units or {}).items():
-        value = _decimal(raw_value, label=f"billable unit {raw_name}")
+    for raw_name, unit_raw_value in dict(billable_units or {}).items():
+        value = _decimal(unit_raw_value, label=f"billable unit {raw_name}")
         if value > 0:
             units[str(raw_name)] = value
     uncovered: list[str] = []

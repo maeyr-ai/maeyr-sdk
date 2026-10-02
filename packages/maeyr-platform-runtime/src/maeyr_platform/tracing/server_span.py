@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from ._tasks import schedule_trace_task
 from .constants import SPAN_HTTP_SERVER, SpanKind, SpanOperation
 from .context import TraceContext
 from .ids import generate_span_id
@@ -88,7 +88,7 @@ def schedule_http_server_span(
             service=service,
         )
 
-    asyncio.create_task(_emit(), name="http_server_span")
+    schedule_trace_task(_emit, name="http_server_span")
 
 
 def schedule_http_server_span_from_context(

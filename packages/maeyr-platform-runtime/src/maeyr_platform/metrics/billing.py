@@ -174,7 +174,7 @@ def build_agent_allocations(document: Mapping[str, Any]) -> list[dict[str, Any]]
     prompt_parts = _split_integer(document.get("prompt_tokens"), len(agent_ids))
     completion_parts = _split_integer(document.get("completion_tokens"), len(agent_ids))
     if document.get("prompt_tokens") is not None and document.get("completion_tokens") is not None:
-        total_parts = [
+        total_parts: list[int | None] = [
             int(prompt_parts[index] or 0) + int(completion_parts[index] or 0)
             for index in range(len(agent_ids))
         ]

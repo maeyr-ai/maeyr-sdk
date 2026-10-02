@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+from ._tasks import drain_trace_tasks, schedule_trace_task, trace_task_stats
 from .constants import DEFAULT_RETENTION_DAYS
 from .context import get_trace_context
 from .errors import attach_error_to_span_kwargs
@@ -26,6 +27,7 @@ _STOP_DRAIN_PASSES = 50
 
 _memory_queue: deque[Dict[str, Any]] = deque(maxlen=_MAX_QUEUE_SIZE)
 _flush_task: Optional[asyncio.Task[None]] = None
+_immediate_flush_task: Optional[asyncio.Task[None]] = None
 _running = False
 _flush_handler: Optional[Callable[[List[Dict[str, Any]]], Awaitable[object]]] = None
 _remote_recorder: Optional[Any] = None
@@ -70,8 +72,8 @@ def schedule_span_start(**kwargs: Any) -> None:
     if _remote_recorder is not None:
         _remote_recorder.schedule_record(**snap)
         return
-    asyncio.create_task(
-        record_span_start(**snap),
+    schedule_trace_task(
+        lambda: record_span_start(**snap),
         name=f"record_span_start_{snap.get('span_name', 'internal')}",
     )
 
@@ -82,8 +84,8 @@ def schedule_span_end(**kwargs: Any) -> None:
     if _remote_recorder is not None:
         _remote_recorder.schedule_record(**snap)
         return
-    asyncio.create_task(
-        record_span_end(**snap),
+    schedule_trace_task(
+        lambda: record_span_end(**snap),
         name=f"record_span_end_{snap.get('span_name', 'internal')}",
     )
 
@@ -215,7 +217,7 @@ async def _enqueue_or_buffer(doc: Dict[str, Any]) -> None:
             _redis_enqueue_failures,
             _spans_dropped_queue_overflow,
         )
-        asyncio.create_task(_flush(), name="trace_flush_immediate")
+        _schedule_immediate_flush()
     elif _remote_recorder is not None:
         _remote_recorder.schedule_push([doc])
     else:
@@ -227,7 +229,13 @@ async def _enqueue_or_buffer(doc: Dict[str, Any]) -> None:
             len(_memory_queue),
             _spans_dropped_queue_overflow,
         )
-        asyncio.create_task(_flush(), name="trace_flush_immediate")
+        _schedule_immediate_flush()
+
+
+def _schedule_immediate_flush() -> None:
+    global _immediate_flush_task
+    if _immediate_flush_task is None or _immediate_flush_task.done():
+        _immediate_flush_task = schedule_trace_task(_flush, name="trace_flush_immediate")
 
 
 async def record_span(
@@ -577,6 +585,7 @@ async def stop_recorder() -> None:
             await _flush_task
         except asyncio.CancelledError:
             pass
+    await drain_trace_tasks(timeout_seconds=5.0)
     for _ in range(_STOP_DRAIN_PASSES):
         await _flush()
         if not _memory_queue:
@@ -622,5 +631,6 @@ def get_recorder_stats() -> Dict[str, Any]:
         "running": _running,
         "retention_days": _retention_days,
         "redis_enqueue_failures": _redis_enqueue_failures,
+        **trace_task_stats(),
         **get_transport_stats(),
     }

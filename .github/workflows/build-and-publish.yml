@@ -32,6 +32,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+          pip install -e "packages/maeyr-platform-runtime[dev]"
+          pip install ruff==0.15.16 pip-audit==2.10.1
 
       - name: Ruff
         run: |
@@ -40,6 +42,31 @@ jobs:
 
       - name: Pytest
         run: PYTHONPATH=. pytest --cov=maeyr --cov-report=term-missing
+
+      - name: Private platform runtime source and regression gate
+        run: |
+          ruff check packages/maeyr-platform-runtime/src packages/maeyr-platform-runtime/tests
+          PYTHONPATH=packages/maeyr-platform-runtime/src \
+            python -m pytest -q packages/maeyr-platform-runtime/tests
+
+      - name: Public and private dependency security gate
+        run: |
+          python - <<'PY'
+          import pathlib
+          import tomllib
+
+          output = pathlib.Path("/tmp/maeyr-release-requirements.txt")
+          roots = (pathlib.Path("pyproject.toml"),
+                   pathlib.Path("packages/maeyr-platform-runtime/pyproject.toml"))
+          dependencies = []
+          for root in roots:
+              with root.open("rb") as stream:
+                  project = tomllib.load(stream)["project"]
+              dependencies.extend(project["dependencies"])
+              dependencies.extend(project.get("optional-dependencies", {}).get("mcp", []))
+          output.write_text("\n".join(dependencies) + "\n", encoding="utf-8")
+          PY
+          python -m pip_audit --strict -r /tmp/maeyr-release-requirements.txt
 
       - name: Validate package import
         run: |

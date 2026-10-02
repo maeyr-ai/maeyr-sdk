@@ -601,6 +601,7 @@ class RemoteTraceRecorder:
         self,
         spans: list[dict[str, Any]],
     ) -> tuple[bool, bool]:
+        client: Any | None = None
         try:
             import httpx
 
@@ -637,7 +638,6 @@ class RemoteTraceRecorder:
             # A rolled/restarted service can leave a pooled keep-alive socket
             # pointing at the removed endpoint.  Discard that exact pool before
             # retrying so DNS/service discovery selects the ready replacement.
-            client = locals().get("client")
             if client is not None and self._client is client:
                 self._client = None
                 try:

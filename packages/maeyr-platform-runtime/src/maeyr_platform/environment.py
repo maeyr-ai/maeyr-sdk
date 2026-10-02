@@ -32,7 +32,10 @@ def ENVIRON(
     optional: bool = False,
 ) -> object | None:
     """Read a required variable, or return the supplied optional/default value."""
-    return os.environ[key] if not optional and default is None else os.environ.get(key, default)
+    if not optional and default is None:
+        return os.environ[key]
+    value = os.environ.get(key)
+    return default if value is None else value
 
 
 __all__ = ["ENVIRON"]
