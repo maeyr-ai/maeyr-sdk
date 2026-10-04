@@ -4,6 +4,11 @@ The account is the licensed pool, organizations receive slices of that pool,
 and projects receive slices of an organization pool.  This module intentionally
 contains no database or HTTP code so policy writers, runtime gates, clients,
 and tests all use the same resource names and limit semantics.
+
+Hierarchy resolution also supports legacy stored child ``-1`` inheritance.
+Current subscription writers require explicit finite organization/project
+slices; only Account entitlements may be unlimited. DEFAULT_ALLOCATION is a
+legacy read fallback, never an allocation grant for a new child document.
 """
 
 from __future__ import annotations
@@ -59,6 +64,9 @@ _PROJECT_RESOURCES = (
     ProjectResource("triggers", "max_triggers", "triggers_count"),
     ProjectResource("schedules", "max_schedules", "schedules_count"),
     ProjectResource("devspaces", "max_devspaces", "devspaces_count"),
+    ProjectResource("cloud_workers", "max_cloud_workers", "cloud_workers_count"),
+    ProjectResource("volt_connectors", "max_volt_connectors", "volt_connectors_count"),
+    ProjectResource("dedicated_kms_keys", "max_dedicated_kms_keys", "dedicated_kms_keys_count"),
     ProjectResource(
         "chrona_workers_secure",
         "max_chrona_workers_secure",

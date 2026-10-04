@@ -1,10 +1,16 @@
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import HTTPException
 
-from maeyr_platform.usage_limits import UsageLimitClient, enforce_limit, usage_control
+from maeyr_platform.usage_limits import (
+    UsageLimitClient,
+    enforce_cloud_worker_limit,
+    enforce_limit,
+    usage_control,
+)
 
 
 def _client() -> UsageLimitClient:
@@ -159,3 +165,60 @@ async def test_enforce_limit_treats_zero_as_no_capacity_and_minus_one_as_unlimit
     with pytest.raises(HTTPException) as invalid_total:
         await enforce_limit(overflow, "executions", 1, logger=logger)
     assert invalid_total.value.status_code == 503
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user", [
+    {}, {"usage": {}, "limits": {}}, {"usage": None, "limits": {}},
+    {"usage": [], "limits": {}}, {"usage": {}, "limits": None},
+    {"usage": {"agents_count": False}, "limits": {"max_agents": 1}},
+    {"usage": {"agents_count": 0}, "limits": {"max_agents": True}},
+])
+async def test_missing_or_malformed_retained_policy_does_not_authorize_work(
+    user: dict[str, Any],
+) -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await enforce_limit(user, "agents", 1, logger=Mock())
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_unknown_resource_cannot_silently_skip_enforcement() -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await enforce_limit({"usage": {}, "limits": {}}, "agent_typo", 1, logger=Mock())
+    assert exc_info.value.status_code == 503
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("cpu_limit", "memory_limit", "cpu", "memory", "status"), [
+    (-1, -1, 2_147_483_647, 2_147_483_647, None),
+    (-1, 512, 1000, 513, 429), (500, -1, 501, 1000, 429),
+    (500, 512, 500, 512, None), (0, 0, 0, 0, None), (0, 0, 1, 1, 429),
+    (False, 512, 1, 1, 503), (500, None, 1, 1, 503),
+    (-2, 512, 1, 1, 503), (500, float("inf"), 1, 1, 503),
+    (500, 512, -1, 1, 503), (500, 512, 1, False, 503),
+    (500, 512, 1.5, 1, 503), (500, 512, 1, 2_147_483_648, 503),
+])
+async def test_cloud_worker_policy_respects_canonical_bounds_and_each_dimension(
+    cpu_limit: Any, memory_limit: Any, cpu: Any, memory: Any, status: int | None,
+) -> None:
+    user = {"limits": {
+        "max_cloud_worker_cpu_millicores": cpu_limit,
+        "max_cloud_worker_memory_mb": memory_limit,
+    }}
+    if status is None:
+        await enforce_cloud_worker_limit(user, cpu, memory, logger=Mock())
+    else:
+        with pytest.raises(HTTPException) as exc_info:
+            await enforce_cloud_worker_limit(user, cpu, memory, logger=Mock())
+        assert exc_info.value.status_code == status
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user", [{}, {"limits": None}, {"limits": []}, {"limits": {}}])
+async def test_missing_cloud_worker_policy_never_grants_default_capacity(
+    user: dict[str, Any],
+) -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await enforce_cloud_worker_limit(user, 1, 1, logger=Mock())
+    assert exc_info.value.status_code == 503

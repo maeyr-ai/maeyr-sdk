@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import json
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar, cast
 
@@ -17,6 +17,7 @@ from maeyr_platform.resource_allocation import (
     MAX_RESOURCE_VALUE,
     PROJECT_RESOURCES,
     UNLIMITED,
+    validate_resource_limit,
 )
 from maeyr_platform.security.internal_request_signing import sign_internal_request
 
@@ -30,6 +31,9 @@ RESOURCE_KEYS: dict[str, tuple[str, str]] = {
 }
 
 ACCOUNT_USAGE_RESOURCES = frozenset({"chats", "executions"})
+RESERVATION_RESOURCES = frozenset(
+    {"executions", "platform_ai_turns", "ai_token_spend", "trace_ingestion_bytes"}
+)
 
 
 class UsageAuthSettings(Protocol):
@@ -89,10 +93,21 @@ async def enforce_limit(
     """Raise HTTP 429 when a tenant's plan cannot cover an operation."""
     keys = RESOURCE_KEYS.get(resource)
     if keys is None:
-        return
+        logger.error("Unsupported usage resource: %s", resource)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Usage policy is unavailable",
+        )
     usage_key, limit_key = keys
-    used = current_user.get("usage", {}).get(usage_key, 0)
-    maximum = current_user.get("limits", {}).get(limit_key, 0)
+    usage = current_user.get("usage")
+    limits = current_user.get("limits")
+    if not isinstance(usage, Mapping) or not isinstance(limits, Mapping):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Usage policy is unavailable",
+        )
+    used = usage.get(usage_key)
+    maximum = limits.get(limit_key)
     if (
         type(used) is not int
         or used < 0
@@ -140,9 +155,27 @@ async def enforce_cloud_worker_limit(
     logger: UsageLogger,
 ) -> None:
     """Enforce aggregate Worker CPU and memory plan ceilings."""
-    limits = current_user.get("limits", {})
-    maximum_cpu = limits.get("max_cloud_worker_cpu_millicores", 100)
-    maximum_memory = limits.get("max_cloud_worker_memory_mb", 128)
+    limits = current_user.get("limits")
+    if not isinstance(limits, Mapping):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Worker resource policy is unavailable",
+        )
+    maximum_cpu = limits.get("max_cloud_worker_cpu_millicores")
+    maximum_memory = limits.get("max_cloud_worker_memory_mb")
+    if (
+        not validate_resource_limit(maximum_cpu)
+        or not validate_resource_limit(maximum_memory)
+        or type(total_cpu_millicores) is not int
+        or not 0 <= total_cpu_millicores <= MAX_RESOURCE_VALUE
+        or type(total_memory_mb) is not int
+        or not 0 <= total_memory_mb <= MAX_RESOURCE_VALUE
+    ):
+        logger.error("Invalid cloud worker resource policy or requested capacity")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Worker resource policy is unavailable",
+        )
     logger.debug(
         "Checking cloud worker limits principal=%s cpu=%sm/%sm memory=%sMi/%sMi",
         current_user.get("user_id", "unknown"),
@@ -151,7 +184,7 @@ async def enforce_cloud_worker_limit(
         total_memory_mb,
         maximum_memory,
     )
-    if total_cpu_millicores > maximum_cpu:
+    if maximum_cpu != UNLIMITED and total_cpu_millicores > maximum_cpu:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=(
@@ -159,7 +192,7 @@ async def enforce_cloud_worker_limit(
                 f"({maximum_cpu}m). Please upgrade your plan."
             ),
         )
-    if total_memory_mb > maximum_memory:
+    if maximum_memory != UNLIMITED and total_memory_mb > maximum_memory:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=(
@@ -255,6 +288,91 @@ async def post_signed_usage_request(
     return False
 
 
+async def post_signed_license_request(
+    *,
+    endpoint_path: str,
+    payload: dict[str, Any],
+    settings: UsageAuthSettings,
+    caller_service: str,
+    get_session: Callable[[], Awaitable[ClientSession]],
+    logger: UsageLogger,
+    attempts: int = 3,
+) -> dict[str, Any]:
+    """Read or mutate Auth's license authority with an exactly signed body.
+
+    Mutation callers must supply a stable operation ID. Transport retries keep
+    that body and ID intact; a fresh signature nonce does not create new usage.
+    A missing or malformed authority response never authorizes paid work.
+    """
+    account_id = str(payload.get("account_id") or "").strip()
+    org_id = str(payload.get("org_id") or "").strip()
+    project_id = str(payload.get("project_id") or "").strip()
+    if not account_id or (project_id and not org_id):
+        raise ValueError("A complete license scope is required")
+    if not settings.AUTH_SERVICE_URL or not settings.AUTH_INTERNAL_KEY:
+        raise HTTPException(status_code=503, detail="License authority is unavailable")
+    body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    endpoint = f"{settings.AUTH_SERVICE_URL.rstrip('/')}{endpoint_path}"
+    for attempt in range(max(1, attempts)):
+        headers = {
+            "Content-Type": "application/json",
+            "X-Internal-Account-Id": account_id,
+            **sign_internal_request(
+                settings.AUTH_INTERNAL_KEY,
+                method="POST",
+                path=endpoint_path,
+                body=body,
+                service=caller_service,
+                account_id=account_id,
+                org_id=org_id,
+                project_id=project_id,
+                nonce=uuid.uuid4().hex,
+            ),
+        }
+        if org_id:
+            headers["X-Internal-Org-Id"] = org_id
+        if project_id:
+            headers["X-Internal-Project-Id"] = project_id
+        try:
+            session = await get_session()
+            async with session.post(
+                endpoint, data=body, headers=headers, timeout=ClientTimeout(total=5)
+            ) as response:
+                if response.status == 200:
+                    try:
+                        result = await response.json()
+                    except (ValueError, ClientError) as exc:
+                        raise HTTPException(
+                            status_code=503, detail="License authority response is invalid"
+                        ) from exc
+                    if not isinstance(result, dict):
+                        raise HTTPException(
+                            status_code=503, detail="License authority response is invalid"
+                        )
+                    return result
+                if response.status in {402, 403, 409, 429}:
+                    # Do not expose authority exception details, credentials,
+                    # model configuration, or tenant identifiers to the client.
+                    raise HTTPException(
+                        status_code=response.status,
+                        detail=(
+                            "Plan allowance or authorized spending limit reached"
+                            if response.status in {402, 429}
+                            else "This operation is not authorized by the current license"
+                        ),
+                    )
+                if 400 <= response.status < 500:
+                    raise HTTPException(
+                        status_code=503, detail="License authority rejected this operation"
+                    )
+                logger.warning("License authority returned status=%s", response.status)
+        except (ClientError, asyncio.TimeoutError) as exc:
+            logger.warning("License authority transport failed: %s", type(exc).__name__)
+        if attempt + 1 < max(1, attempts):
+            await asyncio.sleep(min(0.5, 0.1 * (2**attempt)))
+    raise HTTPException(status_code=503, detail="License authority is unavailable")
+
+
 def parse_cpu_to_millicores(cpu: str) -> int:
     """Convert Kubernetes CPU notation to integer millicores."""
     if not cpu:
@@ -316,6 +434,226 @@ class UsageLimitClient:
             caller_service=self._caller_service,
             get_session=self.get_session,
             logger=self._logger,
+        )
+
+    async def post_license_request(
+        self, endpoint_path: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        return await post_signed_license_request(
+            endpoint_path=endpoint_path,
+            payload=payload,
+            settings=self._settings,
+            caller_service=self._caller_service,
+            get_session=self.get_session,
+            logger=self._logger,
+        )
+
+    @staticmethod
+    def _scope(account_id: str, org_id: str | None, project_id: str | None) -> dict[str, Any]:
+        if not account_id or (project_id and not org_id):
+            raise ValueError("A complete license scope is required")
+        return {"account_id": account_id, "org_id": org_id, "project_id": project_id}
+
+    @staticmethod
+    def _operation(resource: str, operation_id: str, amount: int) -> dict[str, Any]:
+        if resource not in RESERVATION_RESOURCES:
+            raise ValueError("Unsupported license usage resource")
+        if not operation_id or len(operation_id) > 128:
+            raise ValueError("A stable operation ID is required")
+        if type(amount) is not int or amount < 0 or amount > MAX_RESOURCE_VALUE:
+            raise ValueError("Invalid license usage amount")
+        return {"resource": resource, "operation_id": operation_id, "amount": amount}
+
+    async def runtime_policy(
+        self, account_id: str, org_id: str | None = None, project_id: str | None = None
+    ) -> dict[str, Any]:
+        return await self.post_license_request(
+            "/internal/license/runtime-policy", self._scope(account_id, org_id, project_id)
+        )
+
+    async def admit(
+        self,
+        account_id: str,
+        *,
+        kind: str,
+        operation_id: str,
+        org_id: str | None = None,
+        project_id: str | None = None,
+    ) -> dict[str, Any]:
+        if kind not in {"mcp", "execution", "ai"} or not operation_id:
+            raise ValueError("Invalid account admission")
+        result = await self.post_license_request(
+            "/internal/license/admit",
+            {
+                **self._scope(account_id, org_id, project_id),
+                "operation_id": operation_id,
+                "kind": kind,
+            },
+        )
+        if result.get("admitted") is not True:
+            raise HTTPException(503, "Account admission was not confirmed")
+        return result
+
+    async def authorize_ai_call(
+        self,
+        account_id: str,
+        *,
+        operation_id: str,
+        turn_operation_id: str,
+        model_id: str,
+        input_tokens: int,
+        max_output_tokens: int,
+        org_id: str | None = None,
+        project_id: str | None = None,
+    ) -> dict[str, Any]:
+        if not operation_id or not turn_operation_id or not model_id:
+            raise ValueError("Stable model-call and turn identities are required")
+        if any(type(value) is not int or value < 1 for value in (input_tokens, max_output_tokens)):
+            raise ValueError("Positive model-call bounds are required")
+        return await self.post_license_request(
+            "/internal/license/authorize-ai-call",
+            {
+                **self._scope(account_id, org_id, project_id),
+                "operation_id": operation_id,
+                "turn_operation_id": turn_operation_id,
+                "model_id": model_id,
+                "input_tokens": input_tokens,
+                "max_output_tokens": max_output_tokens,
+            },
+        )
+
+    async def queue_usage(
+        self,
+        account_id: str,
+        operation_id: str,
+        *,
+        action: str,
+        org_id: str | None = None,
+        project_id: str | None = None,
+        root_operation_id: str | None = None,
+        lease_generation: int | None = None,
+        queue_kind: str = "execution",
+    ) -> dict[str, Any]:
+        if action not in {"enqueue", "start", "drop"} or not operation_id:
+            raise ValueError("Invalid execution queue operation")
+        if queue_kind not in {"execution", "ai_turn"}:
+            raise ValueError("Invalid operational queue kind")
+        if action == "start" and (
+            not root_operation_id
+            or type(lease_generation) is not int
+            or lease_generation < 1
+        ):
+            raise ValueError("Execution queue start requires its owned lease generation")
+        return await self.post_license_request(
+            "/internal/license/queue",
+            {
+                **self._scope(account_id, org_id, project_id),
+                "operation_id": operation_id,
+                "action": action,
+                "root_operation_id": root_operation_id,
+                "lease_generation": lease_generation,
+                "queue_kind": queue_kind,
+            },
+        )
+
+    async def execution_lease_state(
+        self, account_id: str, operation_id: str, *, org_id: str, project_id: str
+    ) -> dict[str, Any]:
+        if not operation_id:
+            raise ValueError("A stable execution identity is required")
+        return await self.post_license_request(
+            "/internal/license/execution-lease-state",
+            {**self._scope(account_id, org_id, project_id), "operation_id": operation_id},
+        )
+
+    async def reserve_usage(
+        self,
+        account_id: str,
+        resource: str,
+        operation_id: str,
+        *,
+        amount: int = 1,
+        org_id: str | None = None,
+        project_id: str | None = None,
+        **request_bounds: Any,
+    ) -> dict[str, Any]:
+        operation = self._operation(resource, operation_id, amount)
+        if set(request_bounds) - {
+            "model_id",
+            "rate_card_version",
+            "input_tokens",
+            "max_output_tokens",
+            "max_model_calls",
+            "turn_operation_id",
+            "resume",
+            "lease_owner",
+            "lease_generation",
+        }:
+            raise ValueError("Unsupported license usage bound")
+        return await self.post_license_request(
+            "/internal/usage/reserve",
+            {**self._scope(account_id, org_id, project_id), **operation, **request_bounds},
+        )
+
+    async def settle_usage(
+        self,
+        account_id: str,
+        resource: str,
+        operation_id: str,
+        *,
+        amount: int = 1,
+        org_id: str | None = None,
+        project_id: str | None = None,
+        **actual_usage: Any,
+    ) -> dict[str, Any]:
+        operation = self._operation(resource, operation_id, amount)
+        if set(actual_usage) - {
+            "model_id",
+            "rate_card_version",
+            "input_tokens",
+            "output_tokens",
+            "cached_input_tokens",
+            "provider_request_id",
+            "lease_owner",
+            "lease_generation",
+        }:
+            raise ValueError("Unsupported license usage settlement")
+        return await self.post_license_request(
+            "/internal/usage/settle",
+            {**self._scope(account_id, org_id, project_id), **operation, **actual_usage},
+        )
+
+    async def release_usage(
+        self,
+        account_id: str,
+        resource: str,
+        operation_id: str,
+        *,
+        refund: bool = True,
+        org_id: str | None = None,
+        project_id: str | None = None,
+        lease_owner: str | None = None,
+        lease_generation: int | None = None,
+    ) -> dict[str, Any]:
+        operation = self._operation(resource, operation_id, 0)
+        operation.pop("amount")
+        if type(refund) is not bool:
+            raise ValueError("Invalid license usage refund")
+        if lease_owner is not None and (
+            not lease_owner or type(lease_generation) is not int or lease_generation < 1
+        ):
+            raise ValueError("Execution release requires its owned lease generation")
+        return await self.post_license_request(
+            "/internal/usage/release",
+            {
+                **self._scope(account_id, org_id, project_id),
+                **operation,
+                "refund": refund,
+                **(
+                    {"lease_owner": lease_owner, "lease_generation": lease_generation}
+                    if lease_owner is not None else {}
+                ),
+            },
         )
 
     async def increment_usage(
@@ -408,6 +746,7 @@ __all__ = [
     "enforce_cloud_worker_limit",
     "enforce_limit",
     "post_signed_usage_request",
+    "post_signed_license_request",
     "parse_cpu_to_millicores",
     "parse_memory_to_mb",
     "usage_control",

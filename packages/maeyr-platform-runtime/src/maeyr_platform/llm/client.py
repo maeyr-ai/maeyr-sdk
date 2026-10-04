@@ -11,7 +11,13 @@ from dataclasses import dataclass
 from typing import Any, Generic, Protocol, TypeVar
 
 from maeyr_platform.llm.errors import normalize_provider_error
-from maeyr_platform.llm.models import LLMCapability, LLMScope, ResolvedLLMConfiguration
+from maeyr_platform.llm.models import (
+    CredentialSource,
+    LLMCapability,
+    LLMScope,
+    ResolvedLLMConfiguration,
+)
+from maeyr_platform.usage_limits import UsageLimitClient
 
 ClientT = TypeVar("ClientT")
 
@@ -62,6 +68,8 @@ class UniversalLLMClient(Generic[ClientT]):
         max_resolutions: int = 1024,
         max_clients: int = 64,
         borrowed_clients: tuple[ClientT, ...] = (),
+        funding_authority: UsageLimitClient | None = None,
+        turn_identity: Callable[[], str] | None = None,
     ) -> None:
         if resolution_ttl_seconds <= 0:
             raise ValueError("resolution_ttl_seconds must be positive")
@@ -75,6 +83,8 @@ class UniversalLLMClient(Generic[ClientT]):
         self._max_resolutions = max_resolutions
         self._max_clients = max_clients
         self._borrowed_clients = borrowed_clients
+        self._funding_authority = funding_authority
+        self._turn_identity = turn_identity
         self._resolution_cache: OrderedDict[
             tuple[LLMScope, LLMCapability], tuple[float, ResolvedLLMConfiguration]
         ] = OrderedDict()
@@ -96,6 +106,22 @@ class UniversalLLMClient(Generic[ClientT]):
         config = await self._resolve(scope, selected_capability)
         model = config.model_for(selected_capability)
         client = await self._client(config)
+        from maeyr_platform.llm.licensing import LicensedProviderClient, clear_funding_event
+
+        clear_funding_event()
+        if (
+            self._funding_authority is not None
+            and config.credential_source is CredentialSource.PLATFORM
+        ):
+            options: dict[str, Any] = {}
+            if self._turn_identity is not None:
+                options["turn_identity"] = self._turn_identity
+            client = LicensedProviderClient(  # type: ignore[assignment]
+                client,
+                authority=self._funding_authority,
+                scope=scope,
+                **options,
+            )
         return ResolvedClient(client=client, configuration=config, model=model)
 
     async def invalidate(self, scope: LLMScope | None = None) -> None:
@@ -126,6 +152,8 @@ class UniversalLLMClient(Generic[ClientT]):
             result = resolver_close()
             if inspect.isawaitable(result):
                 await result
+        if self._funding_authority is not None:
+            await self._funding_authority.close()
 
     async def _resolve(
         self,
