@@ -194,18 +194,6 @@ async def close_auth_validator() -> None:
         await session.close()
 
 
-async def _discard_auth_session(session: aiohttp.ClientSession) -> None:
-    """Remove one failed pooled session without closing a newer replacement."""
-    global _auth_session, _auth_session_lock
-    if _auth_session_lock is None:
-        _auth_session_lock = asyncio.Lock()
-    async with _auth_session_lock:
-        if _auth_session is session:
-            _auth_session = None
-    if not session.closed:
-        await session.close()
-
-
 async def _validate_credential_with_retries(
     credential: str,
     org_id: Optional[str] = None,
@@ -252,6 +240,13 @@ async def _validate_credential_with_retries(
                 body=body,
                 timeout=auth_settings.AUTH_API_TIMEOUT,
             )
+            from maeyr_platform.tracing.context import enrich_trace_tenant
+
+            enrich_trace_tenant(
+                account_id=data.get("account_id"),
+                org_id=data.get("org_id"),
+                project_id=data.get("project_id"),
+            )
             return data
         except AuthServiceError as exc:
             logger.error("Auth service contract failure error_type=%s", type(exc).__name__)
@@ -261,8 +256,10 @@ async def _validate_credential_with_retries(
             ) from exc
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             last_error = exc
-            if isinstance(exc, (aiohttp.ClientConnectionError, asyncio.TimeoutError)):
-                await _discard_auth_session(session)
+            # aiohttp retires a failed connection within the connector. One
+            # request's timeout (including a pool wait) must not close the
+            # shared session and interrupt unrelated validations. The session
+            # getter replaces explicitly closed pools; shutdown owns closing.
 
         if attempt < retries:
             logger.warning(

@@ -206,7 +206,7 @@ async def test_non_billable_outbox_evidence_cannot_settle_platform_spend(source,
 @pytest.mark.parametrize("value", [None, 0, -2, True, 1.5, "10"])
 async def test_invalid_root_bounds_never_reserve_or_dispatch(field, value):
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {
                 "max_orchestration_iterations": 10,
@@ -232,7 +232,7 @@ async def test_invalid_root_bounds_never_reserve_or_dispatch(field, value):
 
 async def test_final_start_bounds_override_stale_policy_before_dispatch():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 40, "max_execution_duration_seconds": 1800}
         }
@@ -258,7 +258,7 @@ async def test_final_start_bounds_override_stale_policy_before_dispatch():
 
 async def test_cancellation_after_dispatch_releases_concurrency_without_refunding_count():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }
@@ -290,7 +290,7 @@ async def test_cancellation_after_dispatch_releases_concurrency_without_refundin
 
 async def test_release_outage_still_attempts_queue_cleanup_without_fake_refund():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }
@@ -388,7 +388,7 @@ async def test_committed_enqueue_with_failed_reply_drops_same_signed_queue(
         logger=Mock(),
     )
     auth.get_session = AsyncMock(return_value=Session())
-    auth.runtime_policy = AsyncMock()
+    auth.license_grants = AsyncMock()
     auth.reserve_usage = AsyncMock()
     auth.settle_usage = AsyncMock()
     auth.release_usage = AsyncMock()
@@ -406,7 +406,7 @@ async def test_committed_enqueue_with_failed_reply_drops_same_signed_queue(
     assert denied.value.status_code == 503
     assert calls[-1]["action"] == "drop"
     assert held == set()
-    auth.runtime_policy.assert_not_awaited()
+    auth.license_grants.assert_not_awaited()
     auth.reserve_usage.assert_not_awaited()
     auth.settle_usage.assert_not_awaited()
     auth.release_usage.assert_not_awaited()
@@ -431,7 +431,7 @@ async def test_cancelled_enqueue_attempt_waits_for_queue_cleanup():
         return {"removed": True}
 
     auth.queue_usage.side_effect = queue
-    auth.runtime_policy = AsyncMock()
+    auth.license_grants = AsyncMock()
     auth.reserve_usage = AsyncMock()
 
     async def run():
@@ -457,7 +457,7 @@ async def test_cancelled_enqueue_attempt_waits_for_queue_cleanup():
         with pytest.raises(asyncio.CancelledError):
             await task
     assert held == set()
-    auth.runtime_policy.assert_not_awaited()
+    auth.license_grants.assert_not_awaited()
     auth.reserve_usage.assert_not_awaited()
 
 
@@ -513,7 +513,7 @@ async def test_byok_client_never_uses_funded_allowance_or_platform_fallback():
 @pytest.mark.parametrize("remaining", [None, 0, -1, True, 1.5, "10"])
 async def test_invalid_final_queue_deadline_never_dispatches_and_releases_owned_hold(remaining):
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }

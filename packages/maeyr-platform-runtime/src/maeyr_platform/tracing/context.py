@@ -37,6 +37,9 @@ class TraceContext:
     service: Optional[str] = None
 
     is_root: bool = False
+    # Header correlation metadata is not authenticated tenant identity. Scoped
+    # diagnostics become eligible only after credential/signature validation.
+    tenant_verified: bool = True
 
     def child_span_id(self) -> str:
         return _generate_id(PREFIX_SPAN)
@@ -88,6 +91,7 @@ class TraceContext:
             resource_refs=dict(self.resource_refs) if self.resource_refs else None,
             service=self.service,
             is_root=False,
+            tenant_verified=self.tenant_verified,
         )
 
 
@@ -122,7 +126,12 @@ def enrich_trace_tenant(
     user_email: Optional[str] = None,
     entity_type: Optional[str] = None,
 ) -> None:
-    """Fill missing tenant fields on the active trace context (e.g. after auth)."""
+    """Bind validated tenant fields after authentication or internal verification.
+
+    Do not retain caller-supplied tenant fields when promoting an inbound trace
+    to a verified context. Enrichment of an already verified context preserves
+    fields that the caller intentionally omitted.
+    """
     ctx = get_trace_context()
     if not ctx:
         return
@@ -131,9 +140,9 @@ def enrich_trace_tenant(
         span_id=ctx.span_id,
         parent_span_id=ctx.parent_span_id,
         activity_id=ctx.activity_id,
-        account_id=account_id or ctx.account_id,
-        org_id=org_id or ctx.org_id,
-        project_id=project_id or ctx.project_id,
+        account_id=account_id or (ctx.account_id if ctx.tenant_verified else None),
+        org_id=org_id or (ctx.org_id if ctx.tenant_verified else None),
+        project_id=project_id or (ctx.project_id if ctx.tenant_verified else None),
         user_id=user_id or ctx.user_id,
         user_email=user_email or ctx.user_email,
         entity_type=entity_type or ctx.entity_type,
@@ -141,6 +150,7 @@ def enrich_trace_tenant(
         resource_refs=ctx.resource_refs,
         service=ctx.service,
         is_root=ctx.is_root,
+        tenant_verified=True,
     )
     set_trace_context(updated)
     if updated.account_id:
@@ -206,6 +216,7 @@ def bind_trace_context(
     entity_id: Optional[str] = None,
     resource_refs: Optional[Dict[str, Any]] = None,
     service: Optional[str] = None,
+    tenant_verified: bool = True,
 ) -> contextvars.Token[Optional[TraceContext]]:
     """Bind context extracted from incoming headers."""
     ctx = TraceContext(
@@ -223,6 +234,7 @@ def bind_trace_context(
         resource_refs=resource_refs,
         service=service,
         is_root=parent_span_id is None,
+        tenant_verified=tenant_verified,
     )
     tok = set_trace_context(ctx)
     stack = list(_span_stack.get() or [])

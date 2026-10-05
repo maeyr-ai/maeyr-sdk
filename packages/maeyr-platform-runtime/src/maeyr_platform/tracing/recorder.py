@@ -207,29 +207,37 @@ async def _enqueue_or_buffer(doc: Dict[str, Any]) -> None:
         return
     _redis_enqueue_failures += 1
     if _flush_handler:
-        if len(_memory_queue) >= _MAX_QUEUE_SIZE:
+        overflowed = len(_memory_queue) >= _MAX_QUEUE_SIZE
+        if overflowed:
             _spans_dropped_queue_overflow += 1
         _memory_queue.append(doc)
+        _report_buffer_failure(overflowed=overflowed)
+        _schedule_immediate_flush()
+    elif _remote_recorder is not None:
+        _remote_recorder.schedule_push([doc])
+    else:
+        overflowed = len(_memory_queue) >= _MAX_QUEUE_SIZE
+        if overflowed:
+            _spans_dropped_queue_overflow += 1
+        _memory_queue.append(doc)
+        _report_buffer_failure(overflowed=overflowed)
+        _schedule_immediate_flush()
+
+
+def _report_buffer_failure(*, overflowed: bool) -> None:
+    # Preserve exact counters without logging once per span during an outage.
+    if (
+        _redis_enqueue_failures & (_redis_enqueue_failures - 1) == 0
+        or overflowed
+        and _spans_dropped_queue_overflow & (_spans_dropped_queue_overflow - 1) == 0
+    ):
         logger.error(
-            "Redis enqueue failed; buffered span in memory "
+            "Trace transport did not acknowledge span; buffered in memory "
             "(queue=%d, failures=%d, overflow_drops=%d)",
             len(_memory_queue),
             _redis_enqueue_failures,
             _spans_dropped_queue_overflow,
         )
-        _schedule_immediate_flush()
-    elif _remote_recorder is not None:
-        _remote_recorder.schedule_push([doc])
-    else:
-        if len(_memory_queue) >= _MAX_QUEUE_SIZE:
-            _spans_dropped_queue_overflow += 1
-        _memory_queue.append(doc)
-        logger.error(
-            "Redis enqueue failed with no remote sink; buffered span (queue=%d, overflow_drops=%d)",
-            len(_memory_queue),
-            _spans_dropped_queue_overflow,
-        )
-        _schedule_immediate_flush()
 
 
 def _schedule_immediate_flush() -> None:

@@ -34,14 +34,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mongo = ["motor>=3.6,<4"]
 dev = [
     "build>=1.0.0",
+    "cryptography>=43,<51",
     "mypy>=1.11.0,<2",
     "pytest>=8.0.0,<9",
     "pytest-asyncio>=0.23.0,<1",
     # Redis is an optional runtime integration, but strict type checking must
     # resolve the deliberately lazy ``redis.asyncio`` import.
     "redis>=5,<6",
+    "pymongo>=4.9,<5",
     "ruff>=0.15.16",
     "setuptools>=77",
     "tomli>=2; python_version < '3.11'",

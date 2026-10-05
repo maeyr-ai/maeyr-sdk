@@ -10,9 +10,10 @@ from collections.abc import Awaitable, Callable, Mapping
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar, cast
 
-from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
+from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout, TCPConnector
 from fastapi import HTTPException, status
 
+from maeyr_platform.license_errors import public_license_denial_detail
 from maeyr_platform.resource_allocation import (
     MAX_RESOURCE_VALUE,
     PROJECT_RESOURCES,
@@ -176,6 +177,8 @@ async def enforce_cloud_worker_limit(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Worker resource policy is unavailable",
         )
+    maximum_cpu = cast(int, maximum_cpu)
+    maximum_memory = cast(int, maximum_memory)
     logger.debug(
         "Checking cloud worker limits principal=%s cpu=%sm/%sm memory=%sMi/%sMi",
         current_user.get("user_id", "unknown"),
@@ -288,6 +291,45 @@ async def post_signed_usage_request(
     return False
 
 
+_MAX_LICENSE_DENIAL_BYTES = 4096
+
+
+async def _public_license_denial(response: ClientResponse) -> dict[str, object] | None:
+    """Recognize bounded canonical denials without copying authority details."""
+    if (
+        response.status not in {403, 409, 429}
+        or getattr(response, "content_type", None) != "application/json"
+    ):
+        return None
+    try:
+        try:
+            body = await response.content.readexactly(_MAX_LICENSE_DENIAL_BYTES + 1)
+        except asyncio.IncompleteReadError as exc:
+            body = exc.partial
+        if len(body) > _MAX_LICENSE_DENIAL_BYTES:
+            return None
+        payload = json.loads(body)
+    except (ClientError, asyncio.TimeoutError, ValueError, RecursionError):
+        # A denial remains terminal even if its error body cannot be read.
+        return None
+    if not isinstance(payload, dict) or not isinstance(payload.get("detail"), dict):
+        return None
+    return public_license_denial_detail(response.status, payload["detail"])
+
+
+def _license_retry_headers(response: ClientResponse) -> dict[str, str] | None:
+    """Retain Auth's bounded delta-second retry hint, never arbitrary headers."""
+    if response.status != 429:
+        return None
+    headers = getattr(response, "headers", None)
+    value = headers.get("Retry-After") if headers is not None else None
+    if not isinstance(value, str) or not value.isascii() or not value.isdecimal():
+        return None
+    if len(value) > 6 or int(value) > 86_400:
+        return None
+    return {"Retry-After": str(int(value))}
+
+
 async def post_signed_license_request(
     *,
     endpoint_path: str,
@@ -353,13 +395,27 @@ async def post_signed_license_request(
                 if response.status in {402, 403, 409, 429}:
                     # Do not expose authority exception details, credentials,
                     # model configuration, or tenant identifiers to the client.
+                    public_denial = await _public_license_denial(response)
                     raise HTTPException(
                         status_code=response.status,
-                        detail=(
+                        detail=public_denial
+                        if public_denial is not None
+                        else (
                             "Plan allowance or authorized spending limit reached"
-                            if response.status in {402, 429}
+                            if response.status == 402
+                            else (
+                                "A request or plan allowance limit was reached. "
+                                "Check usage and limits."
+                            )
+                            if response.status == 429
+                            else (
+                                "This operation conflicts with the current license "
+                                "or execution state"
+                            )
+                            if response.status == 409
                             else "This operation is not authorized by the current license"
                         ),
+                        headers=_license_retry_headers(response),
                     )
                 if 400 <= response.status < 500:
                     raise HTTPException(
@@ -471,6 +527,18 @@ class UsageLimitClient:
             "/internal/license/runtime-policy", self._scope(account_id, org_id, project_id)
         )
 
+    async def license_grants(
+        self, account_id: str, org_id: str | None = None, project_id: str | None = None
+    ) -> dict[str, Any]:
+        """Read fresh tenant grants without building live usage/report snapshots.
+
+        Auth verifies the current authority source on every request. This client
+        does not cache grants or fall back to the heavier runtime-policy route.
+        """
+        return await self.post_license_request(
+            "/internal/license/grants", self._scope(account_id, org_id, project_id)
+        )
+
     async def admit(
         self,
         account_id: str,
@@ -539,9 +607,7 @@ class UsageLimitClient:
         if queue_kind not in {"execution", "ai_turn"}:
             raise ValueError("Invalid operational queue kind")
         if action == "start" and (
-            not root_operation_id
-            or type(lease_generation) is not int
-            or lease_generation < 1
+            not root_operation_id or type(lease_generation) is not int or lease_generation < 1
         ):
             raise ValueError("Execution queue start requires its owned lease generation")
         return await self.post_license_request(
@@ -651,7 +717,8 @@ class UsageLimitClient:
                 "refund": refund,
                 **(
                     {"lease_owner": lease_owner, "lease_generation": lease_generation}
-                    if lease_owner is not None else {}
+                    if lease_owner is not None
+                    else {}
                 ),
             },
         )

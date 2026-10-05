@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
 from fastapi import HTTPException
 
 from maeyr_platform.security import tenant_safe_display as display
@@ -302,6 +303,34 @@ def test_stream_error_allowlists_llm_public_failures() -> None:
     assert leaked["error"] == display.TRACE_ERROR_RUN_FAILED
     assert "error_code" not in leaked
     assert "sk-live" not in json.dumps(leaked)
+
+
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        (
+            "platform_unavailable",
+            "A Maeyr platform service is temporarily unavailable. Please try again in a moment.",
+        ),
+        (
+            "request_limited",
+            "This request reached a plan allowance or platform request limit. "
+            "Check your plan and try again when the limit resets.",
+        ),
+        (
+            "request_rejected",
+            "This request could not be authorized or accepted. "
+            "Check your plan and workspace permissions.",
+        ),
+    ],
+)
+def test_stream_error_preserves_static_platform_failure_without_private_details(
+    code: str, message: str
+) -> None:
+    payload = display.sanitize_stream_error_data(
+        {"error": message, "error_code": code, "stack": "private-backend", "detail": "secret"}
+    )
+    assert payload == {"error": message, "error_code": code}
 
 
 def test_stream_event_specific_fields_are_preserved_or_redacted_by_policy() -> None:

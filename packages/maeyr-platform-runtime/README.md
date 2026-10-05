@@ -54,7 +54,7 @@ protocols.
 
 This package intentionally does **not** own:
 
-- environment-variable loading or the decision of when startup policy applies;
+- service-specific environment loading or application startup ordering;
 - route-specific caller allowlists or authorization decisions;
 - MongoDB, Redis, HTTP, Temporal, Kubernetes, or cloud-provider clients;
 - durable queues, retries, dead-letter handling, or replay/idempotency stores;
@@ -66,6 +66,45 @@ Services must inject transports that provide the durability and retry semantics
 their domain requires. A successful in-memory `record` call means only that the
 item entered the bounded local queue; transport acknowledgement defines actual
 delivery.
+
+## Logging policy
+
+All application services use `MAEYR_LOG_LEVEL`, defaulting to `WARNING`.
+`MAEYR_LOG_OVERRIDES` accepts JSON with `accounts`, `organizations`, and
+`projects` maps of exact tenant identifiers to `INFO`, `DEBUG`, or `WARNING`.
+The most specific configured scope wins: project, organization, account, then
+the global level. Configuration is validated before use; wildcards and unknown
+levels or scopes are rejected.
+
+The deployment configuration is the source of these environment variables:
+
+```yaml
+application:
+  logging:
+    level: WARNING
+    overrides:
+      accounts:
+        AC-example: INFO
+      organizations:
+        OI-example: DEBUG
+      projects:
+        PI-example: WARNING
+```
+
+Python services use the shared structured logger and handler filter, including
+third-party logs such as `httpx`. The Node server and hosted worker adapters use
+the same policy contract. An authentication boundary must verify tenant context
+before it can enable a scoped override; inbound headers and failed credentials
+cannot enable verbose logging. Background jobs and isolated hosted agents use
+their server-owned tenant context or its resolved threshold. Console diagnostics
+and customer progress delivery remain separate.
+
+Services must call `configure_logging()` at startup and use `get_logger()`.
+Do not set logger thresholds per request or attach unfiltered handlers: concurrent
+requests must retain independent tenant thresholds. The root logger accepts the
+lowest configured level, while each output handler enforces the verified
+request's policy. JSON output retains tenant and trace identifiers and redacts
+sensitive fields and URL queries.
 
 ## Remote Trace trust boundary
 

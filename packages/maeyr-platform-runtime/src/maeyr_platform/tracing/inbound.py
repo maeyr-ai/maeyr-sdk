@@ -77,6 +77,7 @@ def bind_inbound_trace(
         entity_type=extracted.get("entity_type"),
         entity_id=extracted.get("entity_id"),
         service=service,
+        tenant_verified=bool(account_id and org_id and project_id),
     )
 
 
@@ -123,5 +124,6 @@ def bind_inbound_server_trace(
         entity_id=entity_id or extracted.get("entity_id"),
         resource_refs=resource_refs,
         service=service,
+        tenant_verified=bool(account_id and org_id and project_id),
     )
     return get_trace_context(), tok

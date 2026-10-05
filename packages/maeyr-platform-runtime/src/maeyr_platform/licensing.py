@@ -72,7 +72,7 @@ async def root_execution_license(
         )
         if enqueued.get("enqueued") is not True:
             raise HTTPException(503, "Execution queue admission was not confirmed")
-        policy = await authority.runtime_policy(account_id, **scope)
+        policy = await authority.license_grants(account_id, **scope)
         limits = policy.get("effective_limits", policy.get("limits"))
         if not isinstance(limits, dict):
             raise HTTPException(503, "Execution license limits are unavailable")

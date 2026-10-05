@@ -169,7 +169,7 @@ async def test_reconciliation_replays_same_spend_identity_and_ignores_byok():
 @pytest.mark.asyncio
 async def test_root_execution_counts_before_start_and_keeps_charge_on_failure():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "effective_limits": {
                 "max_orchestration_iterations": 10,
@@ -197,7 +197,7 @@ async def test_root_execution_counts_before_start_and_keeps_charge_on_failure():
 @pytest.mark.asyncio
 async def test_completed_root_cannot_run_again():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {
                 "max_orchestration_iterations": 10,
@@ -223,7 +223,7 @@ async def test_completed_root_cannot_run_again():
 @pytest.mark.asyncio
 async def test_queue_start_denial_refunds_confirmed_undispatched_root():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }
@@ -250,7 +250,7 @@ async def test_queue_start_denial_refunds_confirmed_undispatched_root():
 @pytest.mark.asyncio
 async def test_foreign_root_lease_is_not_dispatched_or_released():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }
@@ -282,7 +282,7 @@ async def test_foreign_root_lease_is_not_dispatched_or_released():
 @pytest.mark.asyncio
 async def test_resume_preserves_generation_and_transactional_runtime_bounds():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 40, "max_execution_duration_seconds": 1800}
         }
@@ -336,7 +336,7 @@ async def test_malformed_account_admission_never_grants_permission():
 @pytest.mark.asyncio
 async def test_prequeued_ai_turn_keeps_queue_kind_at_root_start_and_cleanup():
     auth = authority()
-    auth.runtime_policy = AsyncMock(
+    auth.license_grants = AsyncMock(
         return_value={
             "limits": {"max_orchestration_iterations": 10, "max_execution_duration_seconds": 300}
         }

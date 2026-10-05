@@ -6,6 +6,11 @@ import json
 import re
 from typing import Any, Dict, List, Optional, cast
 
+from maeyr_platform.license_errors import (
+    PUBLIC_LICENSE_DENIAL_CODES,
+    PUBLIC_LICENSE_DENIAL_MESSAGES,
+)
+
 _DEFAULT_MAX_STRING = 2000
 _LARGE_FIELD_MAX = 500
 # Agentic final summaries shown live in chat (match persisted message content budget).
@@ -74,7 +79,7 @@ _PRIVATE_RESUME_STATE_KEYS = frozenset(
     }
 )
 
-_TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
+_TRACE_SAFE_PUBLIC_MESSAGES = PUBLIC_LICENSE_DENIAL_MESSAGES | frozenset(
     {
         TRACE_ERROR_RUN_FAILED,
         TRACE_ERROR_REQUEST_FAILED,
@@ -90,6 +95,15 @@ _TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
         ),
         "The LLM provider could not complete this request. Try again in a moment.",
         "Failed to process request. Please try again.",
+        "A Maeyr platform service is temporarily unavailable. Please try again in a moment.",
+        (
+            "This request reached a plan allowance or platform request limit. "
+            "Check your plan and try again when the limit resets."
+        ),
+        (
+            "This request could not be authorized or accepted. "
+            "Check your plan and workspace permissions."
+        ),
         "Server busy, please try again later",
         "Failed to start streaming",
         TRACE_ERROR_INTERNAL_EXECUTION,
@@ -142,13 +156,16 @@ _TRACE_SAFE_PUBLIC_MESSAGES = frozenset(
     }
 )
 
-_TRACE_SAFE_ERROR_CODES = frozenset(
+_TRACE_SAFE_ERROR_CODES = PUBLIC_LICENSE_DENIAL_CODES | frozenset(
     {
         "llm_rate_limited",
         "llm_auth_failed",
         "llm_rejected",
         "llm_unavailable",
         "request_failed",
+        "platform_unavailable",
+        "request_limited",
+        "request_rejected",
     }
 )
 

@@ -25,9 +25,18 @@ def bounded_env_int(
 
 
 def configure_uvicorn_logging() -> None:
+    from maeyr_platform.observability.logging import configure_logging
+
+    configure_logging()
     logging.getLogger("uvicorn.access").disabled = True
     logging.getLogger("uvicorn.access").propagate = False
-    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    # Uvicorn's default console handlers bypass our JSON formatter and tenant
+    # policy. Route diagnostics through the shared service handler instead.
+    for name in ("uvicorn", "uvicorn.error"):
+        logger = logging.getLogger(name)
+        logger.handlers.clear()
+        logger.propagate = True
+        logger.setLevel(logging.NOTSET)
 
 
 def run_uvicorn_app(
@@ -60,7 +69,8 @@ def run_uvicorn_app(
             loop="uvloop",
             http="httptools",
             access_log=False,
-            log_level="error",
+            log_config=None,
+            log_level=None,
             server_header=False,
             date_header=False,
             **uvicorn_limits,
@@ -85,7 +95,8 @@ def run_uvicorn_app(
             loop="uvloop",
             http="httptools",
             access_log=False,
-            log_level="error",
+            log_config=None,
+            log_level=None,
             server_header=False,
             date_header=False,
             **uvicorn_limits,
