@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import re
 import uuid
 from collections.abc import Awaitable, Callable, Mapping
 from functools import wraps
@@ -630,6 +631,40 @@ class UsageLimitClient:
         return await self.post_license_request(
             "/internal/license/execution-lease-state",
             {**self._scope(account_id, org_id, project_id), "operation_id": operation_id},
+        )
+
+    async def delegated_execution_lease_state(
+        self,
+        account_id: str,
+        operation_id: str,
+        *,
+        parent_lease_owner: str,
+        parent_lease_generation: int,
+        org_id: str,
+        project_id: str,
+    ) -> dict[str, Any]:
+        """Validate a scoped parent lease without consuming another execution."""
+        if not all(isinstance(v, str) and v.strip() for v in (account_id, org_id, project_id)):
+            raise ValueError("A complete delegated execution scope is required")
+        if any(
+            not isinstance(value, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,127}", value) is None
+            for value in (operation_id, parent_lease_owner)
+        ):
+            raise ValueError("Stable parent execution and lease owner identities are required")
+        if (
+            type(parent_lease_generation) is not int
+            or not 1 <= parent_lease_generation <= MAX_RESOURCE_VALUE
+        ):
+            raise ValueError("A positive parent lease generation is required")
+        return await self.post_license_request(
+            "/internal/license/delegated-execution-lease-state",
+            {
+                **self._scope(account_id, org_id, project_id),
+                "operation_id": operation_id,
+                "parent_lease_owner": parent_lease_owner,
+                "parent_lease_generation": parent_lease_generation,
+            },
         )
 
     async def reserve_usage(

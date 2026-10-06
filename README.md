@@ -410,6 +410,21 @@ Typed models: `EndpointExecutionRequest`, `EndpointExecutionResponse`, `AgentInv
 
 Endpoint path format: `{agent_alias}.{module}.{function}` (e.g. `my_agent.main.search`).
 
+For shared serverless execution, set `agent_type=AgentType.SERVERLESS` and omit
+`task_queue`. The platform manager assigns a Chrona Serverless worker; callers
+cannot select its queue or namespace. `timeout` must be between 1 and 900 seconds
+and remains bounded by the account policy. All tiers use the shared `serverless`
+Temporal namespace. The separately deployed manager coordinates workers and
+billing; it does not run customer code.
+
+`await client.builder.agents.serverless_assignment(agent_id)` reads the assigned
+execution worker through Builder without creating or moving the assignment.
+Its typed response includes worker identity, name, namespace, queue, generation
+and availability. An execution result's `runtime_metadata.placement` identifies
+the worker that executed that attempt; `runtime_metadata.usage.occupied_micros`
+excludes queue waiting. These projections are scoped to the account, organization,
+project and agent. Clients never connect directly to worker Pods.
+
 ```python
 from maeyr.models.executor import AgentType, EndpointExecutionRequest
 

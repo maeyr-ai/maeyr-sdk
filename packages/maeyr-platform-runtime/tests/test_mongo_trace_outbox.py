@@ -115,6 +115,7 @@ def event(account: str = "AC-A") -> dict[str, Any]:
         "trace_id": "trace-1",
         "span_id": "span-1",
         "status": "completed",
+        "span_name": "worker.execute",
     }
 
 
@@ -122,6 +123,21 @@ def event(account: str = "AC-A") -> dict[str, Any]:
 def clear_index_memo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("TRACE_MAINTENANCE_DATABASE", raising=False)
     module._indexed_outboxes.clear()
+
+
+@pytest.mark.asyncio
+async def test_platform_diagnostic_is_discarded_before_db_or_ddl_access() -> None:
+    client = Client()
+    assert await module.persist_mongo_trace_event(
+        client,
+        {
+            **event(),
+            "span_name": "http.server",
+            "trace_category": "ai",
+            "attributes": {"http.route": "/auth/me"},
+        },
+    )
+    assert client.collections == {} and client.rows == {} and client.pending == {}
 
 
 @pytest.mark.asyncio

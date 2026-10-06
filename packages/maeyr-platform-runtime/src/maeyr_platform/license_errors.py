@@ -5,6 +5,141 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 _PUBLIC_LICENSE_DENIALS: dict[tuple[int, str], dict[str, object]] = {
+    (503, "builder_query_indexes_preparation_required"): {
+        "code": "builder_query_indexes_preparation_required",
+        "message": (
+            "Agent and workforce database preparation is incomplete. Ask your administrator "
+            "to complete the application release."
+        ),
+        "retryable": False,
+    },
+    (503, "builder_query_indexes_unavailable"): {
+        "code": "builder_query_indexes_unavailable",
+        "message": (
+            "Agent and workforce database readiness could not be verified. Try again shortly."
+        ),
+        "retryable": True,
+    },
+    (503, "auth_query_indexes_preparation_required"): {
+        "code": "auth_query_indexes_preparation_required",
+        "message": (
+            "Account history database preparation is incomplete. Ask your administrator to "
+            "complete the application release."
+        ),
+        "retryable": False,
+    },
+    (503, "auth_query_indexes_unavailable"): {
+        "code": "auth_query_indexes_unavailable",
+        "message": "Account history database readiness could not be verified. Try again shortly.",
+        "retryable": True,
+    },
+    (503, "trace_query_indexes_preparation_required"): {
+        "code": "trace_query_indexes_preparation_required",
+        "message": (
+            "Trace database preparation is incomplete. Ask your administrator to complete "
+            "the application release."
+        ),
+        "retryable": False,
+    },
+    (503, "trace_query_indexes_unavailable"): {
+        "code": "trace_query_indexes_unavailable",
+        "message": "Trace database readiness could not be verified. Try again shortly.",
+        "retryable": True,
+    },
+    (409, "project_user_indexes_preparation_required"): {
+        "code": "project_user_indexes_preparation_required",
+        "message": (
+            "People constraints need database preparation before this change can be "
+            "applied. Your current schema remains active. Ask your administrator to "
+            "complete preparation, then retry."
+        ),
+        "retryable": False,
+    },
+    (503, "project_user_indexes_unavailable"): {
+        "code": "project_user_indexes_unavailable",
+        "message": "People constraints could not be verified. Try again shortly.",
+        "retryable": True,
+    },
+    (409, "project_user_schema_conflict"): {
+        "code": "project_user_schema_conflict",
+        "message": (
+            "The People schema changed while this update was being prepared. Refresh the "
+            "schema and review your changes before retrying."
+        ),
+        "retryable": False,
+    },
+    (503, "directory_indexes_not_ready"): {
+        "code": "directory_indexes_not_ready",
+        "message": (
+            "People database preparation is incomplete or could not be verified. Ask your "
+            "administrator to complete the application release."
+        ),
+        "retryable": False,
+    },
+    (503, "directory_preparation_state_unavailable"): {
+        "code": "directory_preparation_state_unavailable",
+        "message": "People database preparation status could not be verified. Try again shortly.",
+        "retryable": True,
+    },
+    (429, "mongodb_storage_limit_exceeded"): {
+        "code": "mongodb_storage_limit_exceeded",
+        "message": "The account database storage limit has been reached. "
+        "Review storage and your plan.",
+        "retryable": False,
+    },
+    (429, "mongodb_storage_reservation_exceeds_headroom"): {
+        "code": "mongodb_storage_reservation_exceeds_headroom",
+        "message": "This operation requires more database storage headroom for estimated growth. "
+        "Review storage and the operation.",
+        "retryable": False,
+    },
+    (429, "directory_preparation_storage_headroom_required"): {
+        "code": "directory_preparation_storage_headroom_required",
+        "message": "People search preparation needs more database storage headroom. "
+        "Existing stored data remains readable through prepared views. "
+        "Ask your administrator to review account storage and the preparation operation.",
+        "retryable": False,
+    },
+    (429, "directory_queue_preparation_storage_headroom_required"): {
+        "code": "directory_queue_preparation_storage_headroom_required",
+        "message": "Sync queue preparation needs additional account database storage headroom. "
+        "Review storage and the account allowance with your administrator.",
+        "retryable": False,
+    },
+    (503, "directory_queue_indexes_not_ready"): {
+        "code": "directory_queue_indexes_not_ready",
+        "message": "Sync queue indexes are not ready for this account. "
+        "Ask your administrator to complete database preparation.",
+        "retryable": False,
+    },
+    (503, "directory_queue_index_conflict"): {
+        "code": "directory_queue_index_conflict",
+        "message": "Sync queue index definitions conflict with the required configuration. "
+        "Ask your administrator to review database index setup.",
+        "retryable": False,
+    },
+    (503, "mongodb_storage_observation_unavailable"): {
+        "code": "mongodb_storage_observation_unavailable",
+        "message": "Account database storage usage is being verified. Try again shortly.",
+        "retryable": True,
+    },
+    (409, "mongodb_storage_grant_unavailable"): {
+        "code": "mongodb_storage_grant_unavailable",
+        "message": "The account database storage allowance is not configured. "
+        "Contact your administrator.",
+        "retryable": False,
+    },
+    (503, "mongodb_storage_accounting_unavailable"): {
+        "code": "mongodb_storage_accounting_unavailable",
+        "message": "Database storage admission is unavailable. Try again shortly.",
+        "retryable": True,
+    },
+    (409, "mongodb_storage_operation_unsupported"): {
+        "code": "mongodb_storage_operation_unsupported",
+        "message": "This database operation requires a bounded, "
+        "storage-aware maintenance operation.",
+        "retryable": False,
+    },
     (403, "trial_expired"): {
         "code": "trial_expired",
         "message": "The Free trial has expired.",

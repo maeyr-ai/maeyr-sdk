@@ -13,7 +13,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 _EXPECTED_DISTRIBUTION = "maeyr"
-_PRIVATE_DISTRIBUTIONS = frozenset({"maeyr-platform-runtime"})
+_PRIVATE_DISTRIBUTIONS = frozenset({"maeyr-platform-runtime", "maeyr-serverless-common"})
 
 
 def _normalize_distribution(value: str) -> str:

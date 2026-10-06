@@ -10,6 +10,7 @@ from maeyr.models.agent import (
     AgentDeletionResult,
     AgentUpdateRequest,
 )
+from maeyr.models.serverless import ServerlessAssignmentResponse
 
 if TYPE_CHECKING:
     from maeyr.client.base import MaeyrClient
@@ -53,6 +54,23 @@ class _AgentsClient:
 
     async def get(self, agent_id: str) -> Dict[str, Any]:
         return await self._builder._client._arequest("GET", _BUILDER, f"/agent/{agent_id}")
+
+    async def serverless_assignment(self, agent_id: str) -> ServerlessAssignmentResponse:
+        """Read the manager's assigned execution worker without changing placement."""
+        from urllib.parse import quote
+
+        org_id, project_id = self._builder._client.org_id, self._builder._client.project_id
+        payload = await self._builder._client._arequest(
+            "GET", _BUILDER, f"/agent/{quote(agent_id, safe='')}/serverless-assignment"
+        )
+        result = ServerlessAssignmentResponse.model_validate(payload)
+        if (
+            result.agent_id != agent_id
+            or (org_id is not None and result.org_id != org_id)
+            or (project_id is not None and result.project_id != project_id)
+        ):
+            raise ValueError("Serverless assignment does not match the requested scope")
+        return result
 
     async def update(self, agent_id: str, request: AgentUpdateRequest) -> Dict[str, Any]:
         body = request.model_dump(mode="json", exclude_none=True)

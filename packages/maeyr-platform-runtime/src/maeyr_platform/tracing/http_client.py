@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Mapping, MutableMapping, Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 
@@ -13,8 +14,10 @@ from ._tasks import schedule_trace_task
 from .constants import SPAN_HTTP_CLIENT, SpanKind, SpanOperation
 from .context import get_trace_context
 from .ids import generate_span_id, normalize_span_id
+from .policy import tenant_trace_category
 from .propagation import merge_trace_headers
 from .recorder import record_span
+from .routing import route_span_for_recording
 from .semconv import ATTR_HTTP_METHOD, ATTR_HTTP_ROUTE, ATTR_HTTP_STATUS
 
 HeaderMapping = Union[Mapping[str, str], MutableMapping[str, str], Dict[str, str]]
@@ -40,23 +43,56 @@ def schedule_http_client_span(
     started_at: datetime,
     service: Optional[str] = None,
     error_message: Optional[str] = None,
+    cancelled: bool = False,
 ) -> None:
     ctx = get_trace_context()
     if not ctx:
         return
     span_id = normalize_span_id(generate_span_id())
     parsed = urlparse(url)
-    route = parsed.path or url
-    status = "ok" if status_code < 400 and not error_message else "error"
+    route = parsed.path or "/"
+    status = (
+        "cancelled"
+        if cancelled
+        else "ok"
+        if 100 <= status_code < 400 and not error_message
+        else "error"
+    )
     attrs: Dict[str, Any] = {
         ATTR_HTTP_METHOD: method.upper(),
         ATTR_HTTP_ROUTE: route,
         ATTR_HTTP_STATUS: status_code,
-        "url.full": url,
+        # Credentials and query parameters can contain customer API keys.
+        "url.full": urlunparse(
+            (parsed.scheme, parsed.netloc.rsplit("@", 1)[-1], parsed.path, "", "", "")
+        ),
         "server.address": parsed.hostname or "",
     }
     if error_message:
         attrs["error.message"] = error_message[:500]
+    diagnostic = {
+        "span_id": span_id,
+        "trace_id": ctx.trace_id,
+        "parent_span_id": ctx.span_id,
+        "service": service or ctx.service,
+        "span_name": SPAN_HTTP_CLIENT,
+        "span_kind": SpanKind.CLIENT.value,
+        "operation": SpanOperation.HTTP_CLIENT.value,
+        "status": status,
+        "started_at": started_at,
+        "ended_at": datetime.now(timezone.utc),
+        "duration_ms": max(duration_ms, 0),
+        "attributes": attrs,
+        "account_id": ctx.account_id,
+        "org_id": ctx.org_id,
+        "project_id": ctx.project_id,
+        "entity_type": ctx.entity_type,
+        "resource_refs": ctx.resource_refs,
+        "_tenant_verified": ctx.tenant_verified,
+    }
+    if tenant_trace_category(diagnostic) is None:
+        route_span_for_recording(diagnostic)
+        return
 
     async def _emit() -> None:
         await record_span(
@@ -81,6 +117,7 @@ def schedule_http_client_span(
             entity_type=ctx.entity_type,
             entity_id=ctx.entity_id,
             resource_refs=ctx.resource_refs,
+            _tenant_verified=ctx.tenant_verified,
         )
 
     schedule_trace_task(_emit, name="http_client_span")
@@ -140,6 +177,7 @@ async def traced_httpx_request(client: Any, method: str, url: str, **kwargs: Any
     max_response_bytes = kwargs.pop("max_response_bytes", None)
     status_code = 0
     err: Optional[str] = None
+    cancelled = False
     try:
         if max_response_bytes is None:
             response = await client.request(method, url, **kwargs)
@@ -153,6 +191,10 @@ async def traced_httpx_request(client: Any, method: str, url: str, **kwargs: Any
             )
         status_code = int(response.status_code)
         return response
+    except asyncio.CancelledError:
+        cancelled = True
+        err = "HTTP request cancelled"
+        raise
     except Exception as exc:
         err = str(exc)
         status_code = 0
@@ -166,6 +208,7 @@ async def traced_httpx_request(client: Any, method: str, url: str, **kwargs: Any
             started_at=started_at,
             service=service if isinstance(service, str) else None,
             error_message=err,
+            cancelled=cancelled,
         )
 
 
@@ -186,12 +229,17 @@ async def traced_aiohttp_post_json(
     merged = _merge_headers(headers)
     status_code = 0
     err: Optional[str] = None
+    cancelled = False
     try:
         async with async_timeout.timeout(timeout or 30):
             async with session.post(url, json=json_data, headers=merged, **kwargs) as response:
                 status_code = int(response.status)
                 body = await response.json()
                 return status_code, body
+    except asyncio.CancelledError:
+        cancelled = True
+        err = "HTTP request cancelled"
+        raise
     except Exception as exc:
         err = str(exc)
         raise
@@ -203,4 +251,5 @@ async def traced_aiohttp_post_json(
             duration_ms=int((time.perf_counter() - start) * 1000),
             started_at=started_at,
             error_message=err,
+            cancelled=cancelled,
         )

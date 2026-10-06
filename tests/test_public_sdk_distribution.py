@@ -45,18 +45,23 @@ def test_public_sdk_distribution_excludes_private_runtime(tmp_path: Path) -> Non
     result = verify_public_sdk_distribution(_artifacts(tmp_path))
 
     assert result["distribution"] == "maeyr"
-    assert result["private_distributions_excluded"] == ["maeyr-platform-runtime"]
+    assert result["private_distributions_excluded"] == [
+        "maeyr-platform-runtime",
+        "maeyr-serverless-common",
+    ]
 
 
-def test_public_sdk_distribution_rejects_private_package_path(tmp_path: Path) -> None:
-    artifacts = _artifacts(tmp_path, wheel_member="maeyr_platform_runtime/__init__.py")
+@pytest.mark.parametrize("package", ["maeyr_platform_runtime", "maeyr_serverless_common"])
+def test_public_sdk_distribution_rejects_private_package_path(tmp_path: Path, package: str) -> None:
+    artifacts = _artifacts(tmp_path, wheel_member=f"{package}/__init__.py")
 
     with pytest.raises(ValueError, match="private package paths"):
         verify_public_sdk_distribution(artifacts)
 
 
-def test_public_sdk_distribution_rejects_private_dependency(tmp_path: Path) -> None:
-    artifacts = _artifacts(tmp_path, requirement="maeyr-platform-runtime==1.0.0")
+@pytest.mark.parametrize("package", ["maeyr-platform-runtime", "maeyr-serverless-common"])
+def test_public_sdk_distribution_rejects_private_dependency(tmp_path: Path, package: str) -> None:
+    artifacts = _artifacts(tmp_path, requirement=f"{package}==1.0.0")
 
     with pytest.raises(ValueError, match="private dependency"):
         verify_public_sdk_distribution(artifacts)

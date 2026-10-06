@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
+from maeyr_platform.tracing.policy import tenant_trace_category
 from maeyr_platform.tracing.transport import durable_outbox_event_id
 from maeyr_platform.tracing.work_registry import enqueue_trace_work_update
 
@@ -58,7 +59,10 @@ async def persist_mongo_trace_event(client: Any, doc: Mapping[str, Any]) -> bool
 
     Requires Mongo transactions (replica set/sharded cluster). Failure propagates
     to the recorder, which retains the event instead of falsely acknowledging it.
+    Non-customer diagnostics are acknowledged as discarded before any DB access.
     """
+    if tenant_trace_category(doc) is None:
+        return True
     account_id = str(doc.get("account_id") or "").strip()
     if not account_id:
         return False

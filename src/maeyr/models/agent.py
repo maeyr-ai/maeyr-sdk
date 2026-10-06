@@ -50,6 +50,7 @@ class EndpointStatus(str, Enum):
 class AgentType(str, Enum):
     CLOUD = "cloud"
     SECURE = "secure"
+    SERVERLESS = "serverless"
 
 
 class AgentFile(BaseModel):

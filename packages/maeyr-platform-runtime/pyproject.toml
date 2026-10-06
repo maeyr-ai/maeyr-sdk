@@ -28,6 +28,8 @@ dependencies = [
     "httpx>=0.25,<1",
     "pydantic>=2.4.0,<3",
     "pydantic-settings>=2,<3",
+    # Core quota contracts persist wide integer grants as canonical BSON Int64.
+    "pymongo>=4.9,<5",
     "python-json-logger>=4,<5",
     "uvicorn>=0.24,<1",
     "uvloop>=0.19,<1; platform_system != 'Windows'",
@@ -44,7 +46,6 @@ dev = [
     # Redis is an optional runtime integration, but strict type checking must
     # resolve the deliberately lazy ``redis.asyncio`` import.
     "redis>=5,<6",
-    "pymongo>=4.9,<5",
     "ruff>=0.15.16",
     "setuptools>=77",
     "tomli>=2; python_version < '3.11'",

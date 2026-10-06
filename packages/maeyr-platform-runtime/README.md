@@ -44,6 +44,11 @@ allowing a same-named public package to substitute for the private source, and
 automation must pin that private checkout to a full commit SHA. See the source
 gate in [`MIGRATION.md`](MIGRATION.md).
 
+PyMongo is a core dependency because the public resource-allocation and license
+client contracts use canonical BSON `Int64` for wide grants. Importing these
+contracts does not create a database client. Motor-backed database adapters remain
+in the optional `mongo` extra, and Redis integrations remain optional.
+
 The instance APIs are canonical. Functional `configure_*`, `start_*`,
 `record_*`, and `stop_*` helpers provide the shared process-level lifecycle
 used by current service composition roots. New service code should construct
@@ -56,7 +61,8 @@ This package intentionally does **not** own:
 
 - service-specific environment loading or application startup ordering;
 - route-specific caller allowlists or authorization decisions;
-- MongoDB, Redis, HTTP, Temporal, Kubernetes, or cloud-provider clients;
+- creation and connection settings for MongoDB, Redis, HTTP, Temporal,
+  Kubernetes, or cloud-provider clients;
 - durable queues, retries, dead-letter handling, or replay/idempotency stores;
 - trace/metric ingestion repositories and analytics;
 - service/domain event names or business resource semantics; or
@@ -66,6 +72,74 @@ Services must inject transports that provide the durability and retry semantics
 their domain requires. A successful in-memory `record` call means only that the
 item entered the bounded local queue; transport acknowledgement defines actual
 delivery.
+
+## Customer activity and platform observability
+
+`tracing.policy.tenant_trace_category` is the shared positive admission policy.
+Tenant `spans` and `traces` retain AI activity and meaningful usage billing:
+LLM requests, agent/tool/MCP execution, workflows, channels, schedules,
+triggers, approvals, evaluation, lifecycle updates, failures and cancellations.
+Execution dependencies on external providers/tools remain correlated. Ordinary
+platform HTTP requests, catalog/discovery calls and internal administration
+are exported through the separate optional `OTLP_TRACES_ENDPOINT` sink instead.
+No configured platform collector means those diagnostics are not persisted in
+customer databases. Authentication and signed tenant boundaries still apply.
+These diagnostics never enter Maeyr MongoDB collections, durable Redis trace
+queues, MongoDB fallback outboxes, dead-letter collections or maintenance wakeups.
+Exporter failure discards diagnostics without creating a database fallback.
+
+Important AI/billing spans bypass probabilistic sampling. `TRACE_SAMPLE_RATE`
+controls optional platform diagnostics. This is a retention policy, not a
+promise of delivery under unlimited outages or storage: the bounded durable
+outboxes, retries, acknowledgements and licensed trace/storage admission remain
+in force. Billing ledgers remain the authority even if optional telemetry fails.
+Trace-ingestion reservation/settlement and Trace's own control calls are excluded
+from tenant tracing to prevent recursive billing traffic.
+
+The receiver applies the same policy before storage admission and DLQ replay;
+caller-supplied categories cannot override it. Stored root categories are
+derived from admitted children, with AI taking precedence over billing. Run,
+latency and AI-cost metrics use AI activity only; billing events have separate
+counters. Historical HTTP-only records are excluded from customer queries and
+metrics. Deploy the runtime, receiver and customer-activity UI together. Existing
+HTTP-only documents are not automatically deleted by this source change.
+Platform OTLP export uses a separate bounded in-flight budget, default 32
+requests (`OTLP_MAX_IN_FLIGHT_EXPORTS`, range 1–128). An unavailable collector
+cannot grow unbounded tasks/connections or consume tenant outbox capacity;
+`otlp_export_stats()` exposes dropped diagnostic batches and in-flight work.
+
+## Account MongoDB storage admission
+
+`mongo_storage.guard_platform_mongo_client()` wraps a service-owned MongoDB
+client after its connection check. All service composition roots must install
+this adapter before exposing account database handles. Parent handles,
+`with_options()` handles, CRUD, bulk writes and index operations remain guarded.
+External customer MongoDB connectors are separate transports and are excluded.
+
+The account record's `limits.max_mongodb_storage_bytes` is the finite byte grant.
+Its `mongodb_storage` observation and reservation ledger are shared across
+organizations and projects. New grants use 500 MB for Free, 5 GB for Pro and
+25 GB for Team, in decimal bytes; Enterprise requires an explicit contract.
+Missing or malformed persisted authority fails closed. Existing records are
+corrected through an explicit application migration, never a runtime plan
+fallback.
+
+The indexed admission path reserves growth atomically, performs the bounded
+write and settles its charge. `mongodb_storage_observer` provides the shared,
+leased primary measurement of documents plus indexes. Cold refresh is bounded;
+active observation uses an indexed due queue instead of scanning all accounts.
+Observer readiness verifies complete, committed primary index metadata; an
+unfinished, hidden, or TTL-modified observation index cannot satisfy it. Both
+lease acquisition and publication require valid canonical BSON grants and
+counters. Forced refresh cannot create partial accounting for an unprepared
+account; explicit release preparation initializes and measures it first.
+Transactions carry the data mutation and its reservation in the same session.
+Once admission capacity is reached, every account database mutation is blocked,
+including deletes; existing reads remain available.
+
+Growth reservations are estimates, not a proof of exact physical index
+allocation. See the [storage policy and MongoDB constraints](../../../auth-service/docs/account-mongodb-storage.md)
+for guarantees, unsupported operations, rollout prerequisites and tests.
 
 ## Logging policy
 

@@ -22,6 +22,7 @@ from .ids import (
     normalize_span_id,
     normalize_trace_id,
 )
+from .routing import route_span_for_recording
 from .tenant import valid_span_tenant_scope, valid_tenant_id
 
 logger = logging.getLogger(__name__)
@@ -302,6 +303,9 @@ class RemoteTraceRecorder:
     def schedule_push(self, spans: list[dict[str, Any]]) -> None:
         if not spans:
             return
+        spans = [span for span in spans if route_span_for_recording(span)]
+        if not spans:
+            return
         self._key = _trace_internal_key() or self._key
         if not self._key:
             self._dropped_spans += len(spans)
@@ -427,6 +431,8 @@ class RemoteTraceRecorder:
             doc["ended_at"] = span_kwargs.get("ended_at") or now
         if is_completion:
             doc["_is_completion"] = True
+        if "_tenant_verified" in span_kwargs:
+            doc["_tenant_verified"] = span_kwargs["_tenant_verified"] is True
         if self._enrich:
             doc = self._enrich(doc)
         if not valid_span_tenant_scope(doc):
@@ -448,6 +454,9 @@ class RemoteTraceRecorder:
         acknowledge a configured external producer outbox (for example Mongo)
         before any process-local retry is used.
         """
+        if not spans:
+            return True
+        spans = [span for span in spans if route_span_for_recording(span)]
         if not spans:
             return True
         self._key = _trace_internal_key() or self._key
@@ -802,8 +811,13 @@ def get_remote_recorder(service: str, **kwargs: Any) -> RemoteTraceRecorder:
 def configure_remote_sink(service: str, **kwargs: Any) -> RemoteTraceRecorder:
     """Register remote HTTP sink for record_span when no local Mongo flush handler."""
     from . import recorder as rec
+    from .otlp_export import configure_otlp_export, otlp_export_enabled
 
     assert_trace_producer_configuration(service)
+    # Service-owned bootstrap facades call this directly. Initialize their
+    # separate diagnostic sink without overriding an explicitly configured one.
+    if not otlp_export_enabled():
+        configure_otlp_export()
     recorder = get_remote_recorder(service, **kwargs)
     recorder.start()
     rec.set_remote_recorder(recorder)

@@ -1,5 +1,6 @@
 """Canonical contextvars-based distributed trace context."""
 
+import asyncio
 import contextvars
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
@@ -135,21 +136,30 @@ def enrich_trace_tenant(
     ctx = get_trace_context()
     if not ctx:
         return
+    scope_mismatch = any(
+        value is not None and previous is not None and value != previous
+        for value, previous in (
+            (account_id, ctx.account_id),
+            (org_id, ctx.org_id),
+            (project_id, ctx.project_id),
+        )
+    )
+    trusted_metadata = ctx.tenant_verified and not scope_mismatch
     updated = TraceContext(
-        trace_id=ctx.trace_id,
-        span_id=ctx.span_id,
-        parent_span_id=ctx.parent_span_id,
-        activity_id=ctx.activity_id,
-        account_id=account_id or (ctx.account_id if ctx.tenant_verified else None),
-        org_id=org_id or (ctx.org_id if ctx.tenant_verified else None),
-        project_id=project_id or (ctx.project_id if ctx.tenant_verified else None),
-        user_id=user_id or ctx.user_id,
-        user_email=user_email or ctx.user_email,
-        entity_type=entity_type or ctx.entity_type,
-        entity_id=ctx.entity_id,
-        resource_refs=ctx.resource_refs,
+        trace_id=generate_trace_id() if scope_mismatch else ctx.trace_id,
+        span_id=generate_span_id() if scope_mismatch else ctx.span_id,
+        parent_span_id=None if scope_mismatch else ctx.parent_span_id,
+        activity_id=ctx.activity_id if trusted_metadata else None,
+        account_id=account_id or (ctx.account_id if trusted_metadata else None),
+        org_id=org_id or (ctx.org_id if trusted_metadata else None),
+        project_id=project_id or (ctx.project_id if trusted_metadata else None),
+        user_id=user_id or (ctx.user_id if trusted_metadata else None),
+        user_email=user_email or (ctx.user_email if trusted_metadata else None),
+        entity_type=entity_type or (ctx.entity_type if trusted_metadata else None),
+        entity_id=ctx.entity_id if trusted_metadata else None,
+        resource_refs=ctx.resource_refs if trusted_metadata else None,
         service=ctx.service,
-        is_root=ctx.is_root,
+        is_root=True if scope_mismatch else ctx.is_root,
         tenant_verified=True,
     )
     set_trace_context(updated)
@@ -303,6 +313,10 @@ async def trace_span(
     )
     try:
         yield span_id
+    except asyncio.CancelledError:
+        status = "cancelled"
+        err_attrs = {"error.type": "CancelledError", "error.code": "execution_cancelled"}
+        raise
     except Exception as exc:
         status = "error"
         from .errors import error_attributes_from_exception

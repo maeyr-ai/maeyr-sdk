@@ -13,7 +13,7 @@ from .context import get_trace_context
 from .errors import attach_error_to_span_kwargs
 from .ids import generate_span_id, generate_trace_id, normalize_span_id, normalize_trace_id
 from .labels import derive_labels
-from .sampling import should_sample
+from .routing import route_span_for_recording
 from .semconv import enrich_span_attributes, operation_for_span_name
 from .tenant import span_ref, valid_span_tenant_scope, valid_tenant_id
 from .transport import enqueue_span, get_transport_stats, re_enqueue_spans
@@ -194,6 +194,8 @@ def _build_span_doc(
 
 async def _enqueue_or_buffer(doc: Dict[str, Any]) -> None:
     global _redis_enqueue_failures, _spans_dropped_invalid_tenant, _spans_dropped_queue_overflow
+    if not route_span_for_recording(doc):
+        return
     if not valid_span_tenant_scope(doc):
         _spans_dropped_invalid_tenant += 1
         logger.warning(
@@ -287,8 +289,6 @@ async def record_span(
 
     sid = normalize_span_id(span_id or (ctx.span_id if ctx else "") or _new_span_id())
     tid = normalize_trace_id(trace_id or (ctx.trace_id if ctx else "") or _new_trace_id())
-    if not should_sample(tid):
-        return
     pid = parent_span_id
     if pid is None and ctx and ctx.span_id != sid:
         pid = ctx.span_id
@@ -388,8 +388,6 @@ async def record_span_start(
     started = started_at or now
     sid = normalize_span_id(span_id or _new_span_id())
     tid = normalize_trace_id(trace_id or (ctx.trace_id if ctx else "") or _new_trace_id())
-    if not should_sample(tid):
-        return sid
     pid = parent_span_id
     if pid is None and ctx:
         pid = ctx.span_id
@@ -466,8 +464,6 @@ async def record_span_end(
     ended = ended_at or now
     sid = normalize_span_id(span_id)
     tid = normalize_trace_id(trace_id or (ctx.trace_id if ctx else "") or _new_trace_id())
-    if not should_sample(tid):
-        return
     if duration_ms is None and started_at is not None:
         duration_ms = int((ended - started_at).total_seconds() * 1000)
     elif duration_ms is None:

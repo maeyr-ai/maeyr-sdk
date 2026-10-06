@@ -12,20 +12,37 @@ logger = logging.getLogger("platform_traces.otlp_export")
 
 _otlp_endpoint: Optional[str] = None
 _otlp_headers: Dict[str, str] = {}
+_max_in_flight_exports = 32
+_export_tasks: set[asyncio.Task[None]] = set()
+_dropped_export_batches = 0
 
 
 def configure_otlp_export(
     endpoint: Optional[str] = None,
     headers: Optional[Dict[str, str]] = None,
+    max_in_flight: Optional[int] = None,
 ) -> None:
     """Configure OTLP HTTP endpoint, e.g. http://jaeger:4318/v1/traces."""
-    global _otlp_endpoint, _otlp_headers
+    global _otlp_endpoint, _otlp_headers, _max_in_flight_exports
+    configured_limit = (
+        max_in_flight
+        if max_in_flight is not None
+        else int(os.getenv("OTLP_MAX_IN_FLIGHT_EXPORTS", "32"))
+    )
+    if type(configured_limit) is not int or not 1 <= configured_limit <= 128:
+        raise ValueError("OTLP_MAX_IN_FLIGHT_EXPORTS must be an integer between 1 and 128")
+    _max_in_flight_exports = configured_limit
     _otlp_endpoint = (endpoint or os.getenv("OTLP_TRACES_ENDPOINT") or "").strip() or None
     _otlp_headers = dict(headers or {})
 
 
 def otlp_export_enabled() -> bool:
     return bool(_otlp_endpoint)
+
+
+def otlp_export_stats() -> Dict[str, int]:
+    """Platform diagnostics have a separate bounded best-effort capacity."""
+    return {"in_flight": len(_export_tasks), "dropped_batches": _dropped_export_batches}
 
 
 def _to_unix_nano(value: Any) -> int:
@@ -85,12 +102,14 @@ def spans_to_otlp_payload(spans: List[Dict[str, Any]]) -> Dict[str, Any]:
                 if doc.get("parent_span_id")
                 else None,
                 "name": doc.get("span_name") or "internal",
-                "kind": 2 if doc.get("span_kind") == "server" else 1,
+                "kind": {"server": 2, "client": 3, "producer": 4, "consumer": 5}.get(
+                    str(doc.get("span_kind")), 1
+                ),
                 "startTimeUnixNano": str(started),
                 "endTimeUnixNano": str(ended),
                 "attributes": attrs,
                 "status": {
-                    "code": 2 if doc.get("status") == "error" else 1,
+                    "code": 2 if doc.get("status") in {"error", "timeout", "cancelled"} else 1,
                 },
             }
         )
@@ -128,7 +147,18 @@ async def export_spans_otlp(spans: List[Dict[str, Any]]) -> None:
 
 
 def schedule_otlp_export(spans: List[Dict[str, Any]]) -> None:
-    """Non-blocking OTLP export."""
+    """Bounded non-blocking export, independent of important tenant queues."""
+    global _dropped_export_batches
     if not _otlp_endpoint or not spans:
         return
-    asyncio.create_task(export_spans_otlp(spans), name="otlp_trace_export")
+    if len(_export_tasks) >= _max_in_flight_exports:
+        _dropped_export_batches += 1
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        _dropped_export_batches += 1
+        return
+    task = loop.create_task(export_spans_otlp(spans), name="otlp_trace_export")
+    _export_tasks.add(task)
+    task.add_done_callback(_export_tasks.discard)

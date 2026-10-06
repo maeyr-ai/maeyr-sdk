@@ -19,8 +19,22 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Final, Mapping
 
+from bson.int64 import Int64
+
 UNLIMITED: Final[int] = -1
 MAX_RESOURCE_VALUE: Final[int] = 2_147_483_647
+MAX_EXACT_RESOURCE_VALUE: Final[int] = 9_007_199_254_740_991
+# These are scalar admission/period ceilings, never retained inventory. Keeping
+# them distinct prevents fabricated gauges and sums of permission/duration caps.
+SERVERLESS_ALLOCATION_KEYS: tuple[str, ...] = (
+    "serverless_enabled", "max_serverless_duration_seconds",
+    "max_serverless_concurrent_attempts", "max_serverless_queue",
+    "max_serverless_compute_micros_per_trial", "max_serverless_compute_micros_per_month",
+    "max_serverless_spend_minor_per_month",
+)
+SERVERLESS_WIDE_ALLOCATION_KEYS = frozenset({
+    "max_serverless_compute_micros_per_trial", "max_serverless_compute_micros_per_month",
+})
 _OPERATION_KIND = re.compile(r"[a-z][a-z0-9-]{0,31}\Z")
 
 
@@ -105,6 +119,8 @@ ALLOCATION_RESOURCE_KEYS: tuple[str, ...] = (
     "max_projects",
     *PROJECT_ALLOCATION_KEYS,
 )
+LICENSE_ALLOCATION_KEYS = (*ALLOCATION_RESOURCE_KEYS, *SERVERLESS_ALLOCATION_KEYS)
+PROJECT_LICENSE_ALLOCATION_KEYS = (*PROJECT_ALLOCATION_KEYS, *SERVERLESS_ALLOCATION_KEYS)
 DEFAULT_ALLOCATION: Mapping[str, int] = MappingProxyType(
     {key: UNLIMITED for key in ALLOCATION_RESOURCE_KEYS}
 )
@@ -113,9 +129,14 @@ DEFAULT_RESOURCE_USAGE: Mapping[str, int] = MappingProxyType(
 )
 
 
-def validate_resource_limit(value: object) -> bool:
+def validate_resource_limit(value: object, *, resource_key: str | None = None) -> bool:
     """Return whether a stored or requested limit has canonical semantics."""
 
+    if resource_key in SERVERLESS_ALLOCATION_KEYS:
+        maximum = (MAX_EXACT_RESOURCE_VALUE if resource_key in SERVERLESS_WIDE_ALLOCATION_KEYS else
+                   1 if resource_key == "serverless_enabled" else
+                   900 if resource_key == "max_serverless_duration_seconds" else MAX_RESOURCE_VALUE)
+        return type(value) in (int, Int64) and 0 <= value <= maximum
     return type(value) is int and UNLIMITED <= value <= MAX_RESOURCE_VALUE
 
 
@@ -220,6 +241,11 @@ __all__ = [
     "DEFAULT_RESOURCE_USAGE",
     "HierarchicalLimit",
     "MAX_RESOURCE_VALUE",
+    "MAX_EXACT_RESOURCE_VALUE",
+    "SERVERLESS_ALLOCATION_KEYS",
+    "SERVERLESS_WIDE_ALLOCATION_KEYS",
+    "LICENSE_ALLOCATION_KEYS",
+    "PROJECT_LICENSE_ALLOCATION_KEYS",
     "PROJECT_ALLOCATION_KEYS",
     "PROJECT_RESOURCES",
     "ProjectResource",

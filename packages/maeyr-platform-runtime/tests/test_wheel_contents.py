@@ -108,5 +108,43 @@ def test_built_wheel_contains_typed_package_and_license(tmp_path: Path) -> None:
         assert "Requires-Dist: fastapi<1,>=0.109.1\n" in metadata
         assert "Requires-Dist: aiohttp<4,>=3.14.3\n" in metadata
         assert "Requires-Dist: pydantic<3,>=2.4.0\n" in metadata
+        assert "Requires-Dist: pymongo<5,>=4.9\n" in metadata
         assert "Requires-Dist: python-json-logger<5,>=4\n" in metadata
         assert any(name.endswith(".dist-info/licenses/LICENSE") for name in names)
+
+    # Exercise the actual built distribution with optional runtime integrations
+    # unavailable. The metadata assertion above proves BSON is a core install
+    # dependency rather than being supplied incidentally by a Mongo/dev extra.
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            """
+import importlib.abc
+import sys
+
+class NoOptionalIntegrations(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.', 1)[0] in {'motor', 'redis'}:
+            raise ModuleNotFoundError('Optional integration is not installed: ' + fullname)
+        return None
+
+sys.meta_path.insert(0, NoOptionalIntegrations())
+sys.path.insert(0, sys.argv[1])
+from bson.int64 import Int64
+from maeyr_platform.resource_allocation import MAX_EXACT_RESOURCE_VALUE
+from maeyr_platform.usage_limits import UsageLimitClient
+import maeyr_platform
+assert maeyr_platform.__file__.startswith(sys.argv[1] + '/')
+assert int(Int64(MAX_EXACT_RESOURCE_VALUE)) == 9007199254740991
+assert callable(UsageLimitClient.delegated_execution_lease_state)
+assert 'motor' not in sys.modules and 'redis' not in sys.modules
+""",
+            str(wheels[0]),
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )

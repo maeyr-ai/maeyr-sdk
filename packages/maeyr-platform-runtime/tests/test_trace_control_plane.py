@@ -85,15 +85,16 @@ async def test_customer_activity_still_schedules_server_spans(monkeypatch):
         trace_id="a" * 32,
         span_id="b" * 16,
         parent_span_id=None,
-        service="auth-service",
-        method="GET",
-        route="/auth/me",
+        service="headless-service",
+        method="POST",
+        route="/headless/execute",
         status_code=200,
         duration_ms=1,
         started_at=datetime.now(timezone.utc),
         account_id="AC-test",
         org_id="OI-test",
         project_id="PI-test",
+        tenant_verified=True,
     )
     scheduled.assert_called_once()
 
@@ -109,7 +110,12 @@ async def test_transport_failure_logging_is_bounded_and_counters_remain_exact(mo
     monkeypatch.setattr(recorder, "_schedule_immediate_flush", Mock())
     logger = Mock()
     monkeypatch.setattr(recorder, "logger", logger)
-    document = {"account_id": "AC-test", "org_id": "OI-test", "project_id": "PI-test"}
+    document = {
+        "account_id": "AC-test",
+        "org_id": "OI-test",
+        "project_id": "PI-test",
+        "span_name": "worker.execute",
+    }
     for _ in range(129):
         await recorder._enqueue_or_buffer(document)
     assert recorder._redis_enqueue_failures == 129

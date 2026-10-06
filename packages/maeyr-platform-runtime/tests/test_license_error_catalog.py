@@ -57,6 +57,16 @@ def test_public_details_are_static_independent_copies() -> None:
         (429, "rate_exceeded"),
         (429, "model_call_limit_exceeded"),
         (429, "queue_exceeded"),
+        (429, "mongodb_storage_limit_exceeded"),
+        (429, "mongodb_storage_reservation_exceeds_headroom"),
+        (429, "directory_preparation_storage_headroom_required"),
+        (429, "directory_queue_preparation_storage_headroom_required"),
+        (503, "directory_queue_indexes_not_ready"),
+        (503, "directory_queue_index_conflict"),
+        (503, "mongodb_storage_observation_unavailable"),
+        (409, "mongodb_storage_grant_unavailable"),
+        (503, "mongodb_storage_accounting_unavailable"),
+        (409, "mongodb_storage_operation_unsupported"),
         (409, "operation_conflict"),
         (409, "execution_duration_exceeded"),
         (409, "operation_completed"),
@@ -80,3 +90,46 @@ def test_dynamic_authority_details_remain_redacted() -> None:
     assert sanitize_stream_error_data({"error": "private-secret", "error_code": "AC-private"}) == {
         "error": "Run failed"
     }
+
+
+def test_estimated_headroom_denial_does_not_claim_measured_storage_is_full() -> None:
+    detail = public_license_denial_detail(
+        429,
+        {
+            "code": "mongodb_storage_reservation_exceeds_headroom",
+            "message": "private estimated index keys",
+            "estimated_growth_bytes": 999,
+        },
+    )
+    assert detail == {
+        "code": "mongodb_storage_reservation_exceeds_headroom",
+        "message": "This operation requires more database storage headroom for estimated growth. "
+        "Review storage and the operation.",
+        "retryable": False,
+    }
+    assert public_license_denial_detail(503, detail) is None
+
+
+@pytest.mark.parametrize(
+    "code,status,retryable",
+    [
+        ("builder_query_indexes_preparation_required", 503, False),
+        ("builder_query_indexes_unavailable", 503, True),
+        ("auth_query_indexes_preparation_required", 503, False),
+        ("auth_query_indexes_unavailable", 503, True),
+        ("trace_query_indexes_preparation_required", 503, False),
+        ("trace_query_indexes_unavailable", 503, True),
+        ("project_user_indexes_preparation_required", 409, False),
+        ("project_user_indexes_unavailable", 503, True),
+        ("project_user_schema_conflict", 409, False),
+        ("directory_indexes_not_ready", 503, False),
+        ("directory_preparation_state_unavailable", 503, True),
+    ],
+)
+def test_query_preparation_errors_are_static_and_status_bound(code, status, retryable):
+    detail = public_license_denial_detail(
+        status, {"code": code, "message": "private database URI", "retryable": not retryable}
+    )
+    assert detail and detail["code"] == code and detail["retryable"] is retryable
+    assert "private database URI" not in detail["message"]
+    assert public_license_denial_detail(401, {"code": code}) is None

@@ -10,6 +10,8 @@ from .constants import SPAN_HTTP_SERVER, SpanKind, SpanOperation
 from .context import TraceContext
 from .control_plane import is_trace_control_request
 from .ids import generate_span_id
+from .policy import tenant_trace_category
+from .routing import route_span_for_recording
 from .semconv import ATTR_HTTP_METHOD, ATTR_HTTP_ROUTE, ATTR_HTTP_STATUS
 from .tenant import valid_span_tenant_scope
 
@@ -38,6 +40,7 @@ def schedule_http_server_span(
     entity_type: Optional[str] = None,
     entity_id: Optional[str] = None,
     resource_refs: Optional[Dict[str, Any]] = None,
+    tenant_verified: bool = False,
 ) -> None:
     """Fire-and-forget SERVER span for an HTTP request (safe after context clear)."""
     # Metering a trace-delivery authorization call produces another span that
@@ -45,19 +48,6 @@ def schedule_http_server_span(
     # infrastructure work into the tenant's metered trace pipeline.
     if is_trace_control_request(service, route):
         return
-    # Public authentication, readiness, and other pre-tenant requests are valid
-    # application traffic, but they are not tenant traces.  Reject them before
-    # creating a background task so they never become noisy "dropped" spans or
-    # consume recorder capacity.
-    if not valid_span_tenant_scope(
-        {
-            "account_id": account_id,
-            "org_id": org_id,
-            "project_id": project_id,
-        }
-    ):
-        return
-
     from .recorder import record_span
 
     ended_at = datetime.now(timezone.utc)
@@ -67,6 +57,31 @@ def schedule_http_server_span(
         ATTR_HTTP_ROUTE: route,
         ATTR_HTTP_STATUS: status_code,
     }
+    diagnostic = {
+        "span_id": span_id,
+        "trace_id": trace_id,
+        "parent_span_id": parent_span_id,
+        "service": service,
+        "span_name": SPAN_HTTP_SERVER,
+        "span_kind": SpanKind.SERVER.value,
+        "operation": SpanOperation.HTTP_SERVER.value,
+        "status": status,
+        "started_at": started_at,
+        "ended_at": ended_at,
+        "duration_ms": max(duration_ms, 0),
+        "attributes": attrs,
+        "account_id": account_id,
+        "org_id": org_id,
+        "project_id": project_id,
+        "_tenant_verified": tenant_verified,
+    }
+    if tenant_trace_category(diagnostic) is None:
+        # Includes public/pre-tenant requests. Diagnostic export has its own
+        # bounded capacity and cannot take a tenant lifecycle task slot.
+        route_span_for_recording(diagnostic)
+        return
+    if not valid_span_tenant_scope(diagnostic):
+        return
 
     async def _emit() -> None:
         await record_span(
@@ -92,6 +107,7 @@ def schedule_http_server_span(
             resource_refs=resource_refs,
             attributes=attrs,
             service=service,
+            _tenant_verified=tenant_verified,
         )
 
     schedule_trace_task(_emit, name="http_server_span")
@@ -126,4 +142,5 @@ def schedule_http_server_span_from_context(
         entity_type=ctx.entity_type,
         entity_id=ctx.entity_id,
         resource_refs=dict(ctx.resource_refs) if ctx.resource_refs else None,
+        tenant_verified=ctx.tenant_verified,
     )

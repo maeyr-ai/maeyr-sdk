@@ -12,6 +12,7 @@ from typing import Any, Deque, Dict, List, Optional, cast
 
 from ._tasks import schedule_trace_task
 from .constants import REDIS_PROCESSING_QUEUE_KEY, REDIS_QUEUE_KEY
+from .policy import tenant_trace_category
 
 logger = logging.getLogger("platform_traces.transport")
 
@@ -140,6 +141,8 @@ def durable_outbox_event_id(doc: Dict[str, Any]) -> str:
 
 async def _persist_externally(doc: Dict[str, Any]) -> bool:
     global _durable_fallback_accepts, _durable_fallback_failures
+    if tenant_trace_category(doc) is None:
+        return True
     if _durable_fallback is None:
         return False
     try:
@@ -195,6 +198,10 @@ async def _push_pending_if_capacity(redis: Any, payload: str) -> bool:
 async def enqueue_span(doc: Dict[str, Any]) -> bool:
     """Push a span event to the capped durable queue."""
     global _redis_queue_full_rejections
+    # A direct transport call must not bypass producer/receiver admission.
+    # Acknowledged discard avoids retrying diagnostics into any persistent sink.
+    if tenant_trace_category(doc) is None:
+        return True
     if _use_redis and _redis_client:
         try:
             redis = _redis_client.redis if hasattr(_redis_client, "redis") else _redis_client
@@ -227,6 +234,7 @@ async def re_enqueue_spans(docs: List[Dict[str, Any]]) -> int:
     Push failed flush batches back to Redis for retry.
     Returns count successfully re-enqueued; remainder go to in-memory dead letter.
     """
+    docs = [doc for doc in docs if tenant_trace_category(doc) is not None]
     if not docs:
         return 0
     global _dead_letter_overflow_drops
@@ -401,6 +409,9 @@ async def drain_dead_letter_memory(batch_size: int = 500) -> int:
         drained = 0
         try:
             for doc in batch:
+                if tenant_trace_category(doc) is None:
+                    drained += 1
+                    continue
                 admitted = False
                 if redis is not None:
                     try:

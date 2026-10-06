@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from bson.int64 import Int64
 
 from maeyr_platform.resource_allocation import (
     ALLOCATION_RESOURCE_KEYS,
+    LICENSE_ALLOCATION_KEYS,
+    SERVERLESS_ALLOCATION_KEYS,
     PROJECT_ALLOCATION_KEYS,
     PROJECT_RESOURCES,
     RESOURCE_TO_ALLOCATION_KEY,
@@ -23,6 +26,27 @@ def test_resource_mappings_are_complete_and_one_to_one() -> None:
     assert tuple(RESOURCE_TO_ALLOCATION_KEY.values()) == PROJECT_ALLOCATION_KEYS
     assert ALLOCATION_RESOURCE_KEYS == ("max_projects", *PROJECT_ALLOCATION_KEYS)
     assert len(set(RESOURCE_TO_USAGE_KEY.values())) == len(PROJECT_RESOURCES)
+
+
+def test_serverless_scalar_policies_are_not_retained_inventory() -> None:
+    assert set(SERVERLESS_ALLOCATION_KEYS).isdisjoint(ALLOCATION_RESOURCE_KEYS)
+    assert set(SERVERLESS_ALLOCATION_KEYS).issubset(LICENSE_ALLOCATION_KEYS)
+    for field in SERVERLESS_ALLOCATION_KEYS:
+        assert validate_resource_limit(0, resource_key=field)
+        assert not validate_resource_limit(-1, resource_key=field)
+        assert not validate_resource_limit(True, resource_key=field)
+
+
+@pytest.mark.parametrize(("field", "accepted", "rejected"), [
+    ("serverless_enabled", 1, 2),
+    ("max_serverless_duration_seconds", 900, 901),
+    ("max_serverless_compute_micros_per_trial", Int64(9_007_199_254_740_991), 9_007_199_254_740_992),
+    ("max_serverless_compute_micros_per_month", Int64(9_007_199_254_740_991), 9_007_199_254_740_992),
+    ("max_serverless_spend_minor_per_month", 2_147_483_647, 2_147_483_648),
+])
+def test_field_specific_exact_scalar_limits(field, accepted, rejected) -> None:
+    assert validate_resource_limit(accepted, resource_key=field)
+    assert not validate_resource_limit(rejected, resource_key=field)
 
 
 @pytest.mark.parametrize("value", [-1, 0, 1, 2_147_483_647])

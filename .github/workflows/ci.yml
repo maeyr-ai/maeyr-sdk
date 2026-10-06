@@ -45,3 +45,27 @@ jobs:
         run: |
           python -m build
           python scripts/verify_public_sdk_distribution.py dist
+
+      - name: Private serverless contracts regression gate
+        if: matrix.python-version != '3.10'
+        env:
+          SERVERLESS_TEST_REDIS_URL: redis://127.0.0.1:63719/0
+        run: |
+          python -m pip install -e packages/maeyr-serverless-common
+          docker run --detach --name maeyr-serverless-common-test-redis \
+            --publish 127.0.0.1:63719:6379 \
+            redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99 \
+            redis-server --appendonly yes --appendfsync always --maxmemory-policy noeviction
+          for attempt in $(seq 1 30); do
+            if docker exec maeyr-serverless-common-test-redis redis-cli ping | grep -q PONG; then
+              break
+            fi
+            sleep 1
+          done
+          docker exec maeyr-serverless-common-test-redis redis-cli ping | grep -q PONG
+          ruff check packages/maeyr-serverless-common/src packages/maeyr-serverless-common/tests
+          python -m pytest -q packages/maeyr-serverless-common/tests
+
+      - name: Remove isolated serverless contracts Redis
+        if: always() && matrix.python-version != '3.10'
+        run: docker rm --force maeyr-serverless-common-test-redis || true

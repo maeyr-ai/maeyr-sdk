@@ -66,7 +66,10 @@ async def test_http_fallback_tasks_share_background_cap(
     transport.configure_transport(None, http_fallback=blocked_fallback)
     try:
         for index in range(10):
-            assert await transport.enqueue_span({"span_id": str(index)}) is False
+            assert (
+                await transport.enqueue_span({"span_id": str(index), "span_name": "worker.execute"})
+                is False
+            )
         assert _tasks.trace_task_stats()["background_tasks_inflight"] == 2
         assert _tasks.trace_task_stats()["background_tasks_dropped"] == 8
     finally:
